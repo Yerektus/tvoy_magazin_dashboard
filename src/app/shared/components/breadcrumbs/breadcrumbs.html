@@ -1,0 +1,22 @@
+<nav class="min-w-0" aria-label="Хлебные крошки">
+  <ol class="flex min-w-0 items-center gap-1.5 text-md font-normal">
+    @for (item of items(); track item.label; let last = $last) {
+      <li class="min-w-0 items-center gap-1.5" [class]="last ? 'flex' : 'hidden sm:flex'">
+        @if (item.route && !last) {
+          <a
+            [routerLink]="item.route"
+            class="whitespace-nowrap text-neutral-500 transition hover:text-neutral-900"
+          >
+            {{ item.label }}
+          </a>
+        } @else {
+          <span class="truncate" [attr.aria-current]="last ? 'page' : null">{{ item.label }}</span>
+        }
+
+        @if (!last) {
+          <span class="text-neutral-500">/</span>
+        }
+      </li>
+    }
+  </ol>
+</nav>

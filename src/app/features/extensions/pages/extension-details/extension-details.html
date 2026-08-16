@@ -1,0 +1,108 @@
+@if (extension(); as extension) {
+  <!-- Шапка: кто это и кнопка подключения — на одной строке. -->
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div class="flex min-w-0 items-start gap-3">
+      <img
+        [src]="extension.logo"
+        [alt]="extension.name"
+        class="h-12 w-12 shrink-0 rounded-sm object-contain"
+      />
+
+      <div class="min-w-0">
+        <div class="flex flex-wrap items-baseline gap-x-2">
+          <h2 class="text-md font-medium">{{ extension.name }}</h2>
+
+          @if (!loading() && setup()) {
+            <span class="text-xs" [class]="linked() ? 'text-emerald-600' : 'text-neutral-500'">
+              {{ state() }}
+            </span>
+          }
+        </div>
+
+        <p class="mt-0.5 text-sm text-neutral-500">{{ extension.summary }}</p>
+      </div>
+    </div>
+
+    @if (!loading()) {
+      <div class="shrink-0">
+        @if (setup()) {
+          @if (linked()) {
+            <app-button (click)="disconnect()">
+              <span class="text-red-600">Отключить</span>
+            </app-button>
+          } @else {
+            <app-button variant="primary" [loading]="busy()" (click)="connect()">
+              Подключить
+            </app-button>
+          }
+        } @else {
+          <span class="text-sm text-neutral-500">Подключение появится позже</span>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="mt-6 grid max-w-3xl gap-3">
+    @for (paragraph of extension.description; track $index) {
+      <p class="text-sm text-neutral-600">{{ paragraph }}</p>
+    }
+  </div>
+
+  @if (extension.features.length) {
+    <p class="mt-6 text-sm font-medium">Что даёт подключение {{ extension.name }}</p>
+
+    <ul class="mt-3 grid gap-2">
+      @for (feature of extension.features; track feature) {
+        <li class="flex items-start gap-2 text-sm text-neutral-600">
+          <app-icon [icon]="checkIcon" class="mt-0.5 text-emerald-600" />
+          <span>{{ feature }}</span>
+        </li>
+      }
+    </ul>
+  }
+
+  @if (extension.requires.length) {
+    <div class="mt-8 flex max-w-2xl items-start gap-3 rounded-sm border border-neutral-200 p-4">
+      <app-icon [icon]="infoIcon" [size]="18" class="mt-0.5 shrink-0 text-neutral-400" />
+
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium">Обязательные расширения</p>
+
+        <ul class="mt-2">
+          @for (required of extension.requires; track required.slug) {
+            <li>
+              <a
+                [routerLink]="['/settings', required.slug]"
+                class="flex items-center gap-2 py-1.5 transition hover:text-sky-600"
+              >
+                <img
+                  [src]="required.logo"
+                  [alt]="required.name"
+                  class="h-6 w-6 shrink-0 rounded-sm object-contain"
+                />
+
+                <span class="min-w-0 flex-1 truncate text-sm">{{ required.name }}</span>
+
+                <span
+                  class="shrink-0 text-xs"
+                  [class]="ready(required) ? 'text-emerald-600' : 'text-amber-600'"
+                >
+                  {{ ready(required) ? 'Подключено' : 'Не подключено' }}
+                </span>
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
+
+  @if (setup(); as setup) {
+    <app-connect-dialog
+      [extension]="extension"
+      [setup]="setup"
+      [open]="connectOpen()"
+      (closed)="connectOpen.set(false)"
+    />
+  }
+}

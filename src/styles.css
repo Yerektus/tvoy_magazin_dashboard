@@ -1,3 +1,53 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import 'viewerjs/dist/viewer.css';
+
+/* Появление и закрытие модального окна. Длительность продублирована
+   в modal.ts — окно держится в DOM, пока играет анимация закрытия. */
+/* Горизонтальные ленты (табы, ряд кнопок) прокручиваются пальцем,
+   полоса прокрутки там только мешает. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@theme {
+  --font-sans:
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-fade-out: fade-out 150ms ease-in forwards;
+  --animate-modal-in: modal-in 150ms ease-out;
+  --animate-modal-out: modal-out 150ms ease-in forwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes modal-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}

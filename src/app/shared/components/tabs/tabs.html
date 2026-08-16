@@ -1,0 +1,28 @@
+<div role="tablist" class="no-scrollbar flex w-max gap-1 overflow-x-auto">
+  @for (item of items(); track item) {
+    <button
+      type="button"
+      role="tab"
+      [attr.aria-selected]="item === active()"
+      (click)="selected.emit(item)"
+      class="shrink-0 cursor-pointer hover:text-neutral-900 border-b-2 px-2 py-2 text-sm font-medium whitespace-nowrap transition"
+      [class]="
+        item === active()
+          ? 'border-neutral-900 text-neutral-900'
+          : 'border-transparent text-neutral-500'
+      "
+    >
+      {{ item }}
+
+      @if (badges()[item]) {
+        <!-- На активной вкладке число темнее: оно относится к тому, что открыто. -->
+        <span
+          class="ml-0.5 text-md"
+          [class]="item === active() ? 'text-neutral-900' : 'text-neutral-500'"
+        >
+          {{ badges()[item] }}
+        </span>
+      }
+    </button>
+  }
+</div>

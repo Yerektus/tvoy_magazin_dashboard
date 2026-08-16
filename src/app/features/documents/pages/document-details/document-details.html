@@ -1,0 +1,514 @@
+@if (document(); as document) {
+  <!-- На телефоне действия переезжают в нижнюю панель — она в конце шаблона. -->
+  <div class="no-scrollbar -mx-4 hidden overflow-x-auto px-4 sm:mx-0 sm:px-0 lg:block">
+    <div class="flex w-max items-center gap-2 sm:ml-auto">
+      @if (canCheck()) {
+        <app-button variant="primary" [loading]="busy()" (click)="check()">
+          <span class="flex items-center gap-2">
+            <app-icon [icon]="checkedIcon" />
+            Проверено
+          </span>
+        </app-button>
+      }
+
+      @if (canSendToUmag()) {
+        <app-button variant="primary" [loading]="umagBusy()" (click)="sendToUmag()">
+          <span class="flex items-center gap-2">
+            <app-icon [icon]="umagIcon" />
+            Добавить в UMAG
+          </span>
+        </app-button>
+      }
+
+      @if (umagLink()) {
+        <app-button (click)="openDraft()">
+          <span class="flex items-center gap-2">
+            <app-icon [icon]="linkIcon" />
+            Черновик в UMAG
+          </span>
+        </app-button>
+      }
+
+      <app-button [disabled]="!document.image" (click)="viewerOpen.set(true)">
+        <span class="flex items-center gap-2">
+          <app-icon [icon]="viewIcon" />
+          Посмотреть
+        </span>
+      </app-button>
+
+      <app-button [disabled]="!canRetry()" [loading]="busy()" (click)="retry()">
+        <span class="flex items-center gap-2">
+          <app-icon [icon]="retryIcon" />
+          Распознать заново
+        </span>
+      </app-button>
+
+      <app-button [disabled]="busy()" (click)="remove()">
+        <span class="flex items-center gap-2 text-red-600">
+          <app-icon [icon]="removeIcon" />
+          Удалить
+        </span>
+      </app-button>
+    </div>
+  </div>
+
+  <div class="mt-6">
+    @switch (activeTab()) {
+      @case ('История') {
+        <ol>
+          @for (step of steps(); track step.title; let last = $last) {
+            <li class="relative flex gap-5 pb-6 last:pb-0">
+              @if (!last) {
+                <span
+                  class="absolute top-8 bottom-1 left-3 w-px -translate-x-1/2 bg-neutral-200"
+                ></span>
+              }
+
+              <span class="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center">
+                @switch (step.state) {
+                  @case ('done') {
+                    <span
+                      class="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white"
+                    >
+                      <app-icon [icon]="doneIcon" [size]="12" [strokeWidth]="3" />
+                    </span>
+                  }
+                  @case ('current') {
+                    <app-icon [icon]="currentIcon" [size]="18" class="text-sky-500" />
+                  }
+                  @case ('failed') {
+                    <app-icon [icon]="failedIcon" [size]="18" class="text-red-600" />
+                  }
+                  @default {
+                    <app-icon [icon]="waitingIcon" [size]="18" class="text-neutral-400" />
+                  }
+                }
+              </span>
+
+              <div class="min-w-0">
+                <p>{{ step.title }}</p>
+                <p class="mt-0.5 text-sm text-neutral-500">{{ step.note }}</p>
+                <p
+                  class="mt-1.5 inline-block rounded-sm bg-neutral-100 px-2 py-0.5 text-sm text-neutral-600"
+                >
+                  {{ step.at }}
+                </p>
+              </div>
+            </li>
+          }
+        </ol>
+      }
+
+      @case ('Проверка') {
+        <p class="text-sm text-neutral-500">
+          Пройдено {{ checksPassed() }} из {{ checks().length }}
+        </p>
+
+        <ul class="mt-2">
+          @for (check of checks(); track check.label) {
+            <li class="flex items-start gap-3 border-b border-neutral-100 py-3 last:border-0">
+              <app-icon
+                class="mt-0.5"
+                [icon]="checkIcon(check.state)"
+                [size]="18"
+                [class]="checkClasses(check.state)"
+              />
+
+              <div class="min-w-0">
+                <p>{{ check.label }}</p>
+                <p class="mt-0.5 text-sm text-neutral-500">{{ check.note }}</p>
+              </div>
+            </li>
+          }
+        </ul>
+
+        @if (umagState(); as umag) {
+          <div class="mt-6 rounded-sm border border-neutral-200 p-4">
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-sm font-medium">Готовность к UMAG</p>
+              <p class="text-sm text-neutral-500">
+                Поставщик: {{ umag.supplier.agent_name || 'не выбран' }}
+              </p>
+            </div>
+
+            @if (umag.problems.length) {
+              <ul class="mt-2 text-sm text-amber-700">
+                @for (problem of umag.problems; track problem) {
+                  <li>{{ problem }}</li>
+                }
+              </ul>
+            } @else {
+              <p class="mt-2 text-sm text-emerald-600">Всё сходится — можно отправлять</p>
+            }
+
+            <ul class="mt-3">
+              @for (line of umag.lines; track line.id) {
+                <li
+                  class="flex items-center justify-between gap-3 border-b border-neutral-100 py-2 text-sm last:border-0"
+                >
+                  <span class="min-w-0 truncate">{{ line.position }}. {{ line.name }}</span>
+
+                  <span class="flex shrink-0 items-center gap-3">
+                    @if (isGuessed(line)) {
+                      <span
+                        class="rounded-sm bg-sky-50 px-1.5 py-0.5 text-xs whitespace-nowrap text-sky-700"
+                      >
+                        {{ guessNote(line) }}
+                      </span>
+                    }
+
+                    <span [class]="line.status === 'ok' ? 'text-neutral-500' : 'text-amber-600'">
+                      {{ lineNote(line) }}
+                    </span>
+
+                    @if (line.suggested_barcode) {
+                      <span class="text-xs whitespace-nowrap text-neutral-400">
+                        {{ suggestionNote(line) }}
+                      </span>
+
+                      <app-button variant="ghost" (click)="applySuggestion(line)">
+                        Это «{{ line.suggested_name }}»
+                      </app-button>
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+
+        <div class="w-full flex justify-end mt-8">
+          <app-button (click)="addLine()">
+            <span class="flex items-center gap-2">
+              <app-icon [icon]="addIcon" />
+              Добавить позицию
+            </span>
+          </app-button>
+        </div>
+
+        <div class="mt-6 flex items-center justify-between gap-3">
+          <p class="text-sm font-medium">Распознанные позиции</p>
+        </div>
+
+        <app-table
+          class="mt-2 block"
+          minWidth="min-w-[60rem]"
+          [rows]="lines()"
+          [trackKey]="trackLine"
+          [empty]="
+            document.status === 'done'
+              ? 'Позиции не распознаны'
+              : 'ИИ разбирает накладную — позиции появятся здесь'
+          "
+        >
+          <ng-template appTableColumn="position" header="№" width="w-10" let-line>
+            <span class="text-neutral-500">{{ line.position }}</span>
+          </ng-template>
+
+          <ng-template appTableColumn="name" header="Название" width="w-72" let-line>
+            <app-editable-text [value]="line.name" (changed)="saveLine(line, { name: $event })" />
+
+            @if (line.umag_product_name) {
+              <p class="border border-transparent break-words text-neutral-400">
+                UMAG: {{ line.umag_product_name }}
+              </p>
+            }
+          </ng-template>
+
+          <ng-template appTableColumn="barcode" header="Штрихкод" width="w-40" let-line>
+            <app-editable-text
+              class="text-neutral-500"
+              [value]="line.barcode"
+              (changed)="saveLine(line, { barcode: $event })"
+            />
+
+            @if (lineGuessed(line)) {
+              <p class="mt-0.5 border border-transparent text-sky-600">
+                {{ lineGuessNote(line) }}
+              </p>
+            }
+          </ng-template>
+
+          <ng-template
+            appTableColumn="quantity"
+            header="Кол-во"
+            width="w-24"
+            align="right"
+            let-line
+          >
+            <app-editable-text
+              align="right"
+              [value]="line.quantity"
+              [display]="formatQuantity(line.quantity)"
+              (changed)="saveLine(line, { quantity: $event })"
+            />
+          </ng-template>
+
+          <ng-template appTableColumn="unit" header="Ед. изм" width="w-24" let-line>
+            <app-editable-text
+              class="text-neutral-500"
+              [value]="line.unit"
+              (changed)="saveLine(line, { unit: $event })"
+            />
+          </ng-template>
+
+          <ng-template
+            appTableColumn="price"
+            header="Цена по накладной"
+            width="w-40"
+            align="right"
+            footer="Итого"
+            let-line
+          >
+            <app-editable-text
+              align="right"
+              [value]="line.price"
+              [display]="formatMoney(line.price)"
+              (changed)="saveLine(line, { price: $event })"
+            />
+          </ng-template>
+
+          <ng-template
+            appTableColumn="total"
+            header="Итого"
+            width="w-32"
+            align="right"
+            [footer]="linesTotalLabel()"
+            let-line
+          >
+            <app-editable-text
+              align="right"
+              [value]="line.total"
+              [display]="formatMoney(line.total)"
+              (changed)="saveLine(line, { total: $event })"
+            />
+          </ng-template>
+
+          <ng-template appTableColumn="actions" header="" width="w-12" align="right" let-line>
+            <app-button
+              variant="ghost"
+              [icon]="true"
+              ariaLabel="Удалить позицию"
+              (click)="removeLine(line)"
+            >
+              <app-icon [icon]="removeIcon" [size]="16" class="text-neutral-400" />
+            </app-button>
+          </ng-template>
+        </app-table>
+      }
+
+      @default {
+        <!-- Данные строками: слева подпись, справа значение. Разбито по смыслу —
+             кто привёз, что в бумаге и что с ней сделали мы. -->
+        <div class="max-w-3xl text-sm">
+          <p class="text-xs tracking-wide text-neutral-400 uppercase">Поставщик</p>
+
+          <dl class="mt-1">
+            <div [class]="row">
+              <dt [class]="rowLabel">Название</dt>
+              <dd class="min-w-0 break-words">{{ document.supplier || 'не распознан' }}</dd>
+            </div>
+
+            <div [class]="row">
+              <dt [class]="rowLabel">БИН</dt>
+              <dd class="flex min-w-0 flex-wrap items-center gap-2">
+                {{ document.supplier_bin || '—' }}
+
+                @if (document.supplier_bin_auto) {
+                  <span
+                    class="rounded-sm bg-sky-50 px-1.5 py-0.5 text-xs whitespace-nowrap text-sky-700"
+                  >
+                    подставил ИИ по прошлым накладным
+                  </span>
+                }
+              </dd>
+            </div>
+          </dl>
+
+          <p class="mt-6 text-xs tracking-wide text-neutral-400 uppercase">Документ</p>
+
+          <dl class="mt-1">
+            <div [class]="row">
+              <dt [class]="rowLabel">Дата накладной</dt>
+              <dd>{{ formatDate(document.issued_at) }}</dd>
+            </div>
+
+            <div [class]="row">
+              <dt [class]="rowLabel">Позиций</dt>
+              <dd>{{ document.lines_count }}</dd>
+            </div>
+
+            <div [class]="row">
+              <dt [class]="rowLabel">Итого</dt>
+              <dd>{{ formatMoney(document.total) }}</dd>
+            </div>
+
+            <div [class]="row">
+              <dt [class]="rowLabel">Статус</dt>
+              <dd>
+                <span
+                  class="flex items-center gap-2 whitespace-nowrap"
+                  [class]="statusClasses(document.status)"
+                >
+                  <app-icon [icon]="statusIcon(document.status)" />
+                  {{ statusLabel(document.status) }}
+                </span>
+              </dd>
+            </div>
+          </dl>
+
+          <p class="mt-6 text-xs tracking-wide text-neutral-400 uppercase">Обработка</p>
+
+          <dl class="mt-1">
+            @if (document.umag_store_name) {
+              <div [class]="row">
+                <dt [class]="rowLabel">
+                  {{ document.umag_supply_id ? 'Ушла в магазин' : 'Магазин приёмки' }}
+                </dt>
+                <dd class="min-w-0 break-words">{{ document.umag_store_name }}</dd>
+              </div>
+            }
+
+            @if (document.checked_at) {
+              <div [class]="row">
+                <dt [class]="rowLabel">Проверил</dt>
+                <dd class="min-w-0 break-words">{{ document.checked_by_email || 'сотрудник' }}</dd>
+              </div>
+            }
+
+            <div [class]="row">
+              <dt [class]="rowLabel">Потрачено на разбор</dt>
+              <dd>{{ formatCost(document.cost) }}</dd>
+            </div>
+          </dl>
+        </div>
+
+        @if (document.status === 'failed') {
+          <p class="mt-4 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {{ document.error || 'Не удалось разобрать накладную' }}
+          </p>
+        }
+      }
+    }
+  </div>
+
+  <!-- Место под нижнюю панель: иначе она закрывает последние строки таблицы. -->
+  <div class="h-28 lg:hidden"></div>
+
+  <div class="fixed inset-x-0 bottom-0 z-20 lg:hidden">
+    <!-- Главное действие — отдельной строкой над панелью, на всю ширину. -->
+    @if (canCheck() || canSendToUmag() || umagLink()) {
+      <div class="flex gap-2 px-4 pb-2">
+        @if (canCheck()) {
+          <app-button variant="primary" [fullWidth]="true" [loading]="busy()" (click)="check()">
+            <span class="flex items-center justify-center gap-2">
+              <app-icon [icon]="checkedIcon" />
+              Проверено
+            </span>
+          </app-button>
+        }
+
+        @if (canSendToUmag()) {
+          <app-button
+            variant="primary"
+            [fullWidth]="true"
+            [loading]="umagBusy()"
+            (click)="sendToUmag()"
+          >
+            <span class="flex items-center justify-center gap-2">
+              <app-icon [icon]="umagIcon" />
+              Добавить в UMAG
+            </span>
+          </app-button>
+        }
+
+        @if (umagLink()) {
+          <app-button [fullWidth]="true" (click)="openDraft()">
+            <span class="flex items-center justify-center gap-2">
+              <app-icon [icon]="linkIcon" />
+              Черновик в UMAG
+            </span>
+          </app-button>
+        }
+      </div>
+    }
+
+    <!-- Сама панель: иконка сверху, подпись снизу, поровну на всю ширину.
+         Нижний отступ учитывает полосу жестов на айфоне. -->
+    <div
+      class="flex items-stretch border-t border-neutral-200 bg-white pb-[max(0.25rem,env(safe-area-inset-bottom))]"
+    >
+      <button type="button" [class]="barItem" (click)="back()">
+        <app-icon [icon]="backIcon" [size]="20" />
+        Документы
+      </button>
+
+      <button
+        type="button"
+        [class]="barItem"
+        [disabled]="!document.image"
+        (click)="viewerOpen.set(true)"
+      >
+        <app-icon [icon]="viewIcon" [size]="20" />
+        Посмотреть
+      </button>
+
+      <button type="button" [class]="barItem" [disabled]="!canRetry() || busy()" (click)="retry()">
+        @if (busy()) {
+          <app-spinner [size]="20" />
+        } @else {
+          <app-icon [icon]="retryIcon" [size]="20" />
+        }
+        Распознать
+      </button>
+
+      <button type="button" [class]="barDanger" [disabled]="busy()" (click)="remove()">
+        <app-icon [icon]="removeIcon" [size]="20" />
+        Удалить
+      </button>
+    </div>
+  </div>
+
+  @if (document.preview || document.image; as photo) {
+    <app-image-viewer
+      [src]="photo"
+      alt="Фото накладной"
+      [open]="viewerOpen()"
+      (closed)="viewerOpen.set(false)"
+    />
+  }
+
+  @if (umagState()?.supplier; as supplier) {
+    <app-modal
+      [open]="supplierOpen()"
+      title="Какой это поставщик в UMAG?"
+      (closed)="supplierOpen.set(false)"
+    >
+      <p class="text-sm text-neutral-500">
+        В накладной — «{{ supplier.name || 'без названия' }}». В UMAG таких контрагентов несколько,
+        выберите нужного: дальше эта накладная и следующие пойдут на него.
+      </p>
+
+      <ul class="mt-3">
+        @for (agent of supplier.candidates; track agent.id) {
+          <li class="border-b border-neutral-100 last:border-0">
+            <button
+              type="button"
+              class="w-full cursor-pointer py-2.5 text-left text-sm hover:text-sky-600"
+              (click)="chooseSupplier(agent)"
+            >
+              {{ agent.name }}
+              <span class="text-neutral-400">#{{ agent.id }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </app-modal>
+  }
+} @else if (loading()) {
+  <div class="mt-10 flex justify-center text-neutral-400">
+    <app-spinner [size]="24" />
+  </div>
+} @else {
+  <div class="mt-10 text-center text-sm text-neutral-500">Документ не найден</div>
+}

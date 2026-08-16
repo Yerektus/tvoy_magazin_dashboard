@@ -1,0 +1,78 @@
+<div class="overflow-x-auto">
+  <table class="w-full table-fixed text-sm" [class]="minWidth()">
+    <thead>
+      <tr class="border-b border-neutral-200 text-left text-sm text-neutral-500">
+        @for (column of columns(); track column.key()) {
+          <th
+            class="truncate px-3 py-2 font-normal"
+            [class]="column.width()"
+            [class.text-right]="column.align() === 'right'"
+          >
+            @if (column.headerTemplate(); as headerTemplate) {
+              <ng-container *ngTemplateOutlet="headerTemplate" />
+            } @else {
+              {{ column.header() }}
+            }
+          </th>
+        }
+      </tr>
+    </thead>
+
+    <tbody>
+      @for (row of rows(); track key(row, $index); let rowIndex = $index) {
+        <tr
+          class="border-b border-neutral-100 transition hover:bg-neutral-50"
+          [class.cursor-pointer]="clickable()"
+          [attr.tabindex]="clickable() ? 0 : null"
+          (click)="onRowClick($event, row)"
+          (keydown.enter)="onRowClick($event, row)"
+        >
+          @for (column of columns(); track column.key()) {
+            <td
+              class="px-3 py-3 align-top"
+              [class]="column.width()"
+              [class.text-right]="column.align() === 'right'"
+            >
+              <ng-container
+                *ngTemplateOutlet="column.template; context: { $implicit: row, index: rowIndex }"
+              />
+            </td>
+          }
+        </tr>
+      } @empty {
+        <tr>
+          <td
+            [attr.colspan]="columns().length"
+            class="px-3 py-10 text-center text-sm text-neutral-500"
+          >
+            @if (loading()) {
+              <app-spinner [size]="20" class="text-neutral-400" />
+            } @else {
+              {{ empty() }}
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+
+    @if (hasFooter() && rows().length) {
+      <tfoot>
+        <tr class="border-t border-neutral-200 font-medium">
+          @for (column of columns(); track column.key()) {
+            <td
+              class="px-3 py-3"
+              [class]="column.width()"
+              [class.text-right]="column.align() === 'right'"
+            >
+              @if (column.footerTemplate(); as footerTemplate) {
+                <ng-container *ngTemplateOutlet="footerTemplate" />
+              } @else {
+                {{ column.footer() }}
+              }
+            </td>
+          }
+        </tr>
+      </tfoot>
+    }
+  </table>
+</div>

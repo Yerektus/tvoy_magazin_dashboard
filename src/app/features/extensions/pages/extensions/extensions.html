@@ -1,0 +1,58 @@
+<ul class="grid gap-4 sm:grid-cols-3">
+  @for (extension of items(); track extension.slug) {
+    <li
+      class="flex cursor-pointer flex-col rounded-sm p-4 transition hover:bg-neutral-100"
+      tabindex="0"
+      (click)="openCard($event, extension)"
+      (keydown.enter)="openCard($event, extension)"
+    >
+      <!-- Логотип, название и подключение — одной строкой, описание под ними. -->
+      <div class="flex items-start gap-3">
+        <img
+          [src]="extension.logo"
+          [alt]="extension.name"
+          class="h-10 w-10 shrink-0 rounded-sm object-contain"
+        />
+
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium">{{ extension.name }}</p>
+
+          @if (!loading()) {
+            <p
+              class="mt-0.5 text-xs"
+              [class]="connected(extension) ? 'text-emerald-600' : 'text-neutral-500'"
+            >
+              {{ status(extension) }}
+            </p>
+          }
+        </div>
+
+        @if (!loading() && available(extension) && !connected(extension)) {
+          <app-button
+            variant="outline"
+            [icon]="true"
+            ariaLabel="Подключить"
+            [loading]="busy() === extension.slug"
+            (click)="connect(extension)"
+          >
+            <app-icon [icon]="addIcon" [size]="18" />
+          </app-button>
+        }
+      </div>
+
+      <p class="mt-3 text-sm text-neutral-500">{{ extension.summary }}</p>
+    </li>
+  }
+</ul>
+
+<!-- Окно входа для расширения, которое просит логин с паролем. -->
+@if (connecting(); as extension) {
+  @if (setup(extension); as setup) {
+    <app-connect-dialog
+      [extension]="extension"
+      [setup]="setup"
+      [open]="connectOpen()"
+      (closed)="connectOpen.set(false)"
+    />
+  }
+}

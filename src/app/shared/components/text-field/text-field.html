@@ -1,0 +1,23 @@
+<label class="mb-1.5 block text-sm font-medium">{{ label() }}</label>
+
+<input
+  [type]="type()"
+  [value]="value()"
+  [placeholder]="placeholder()"
+  [attr.autocomplete]="autocomplete() || null"
+  [attr.inputmode]="inputMode() || null"
+  [readOnly]="readonly()"
+  [disabled]="disabled()"
+  (input)="handleInput($event)"
+  (blur)="handleBlur()"
+  class="w-full rounded-sm border border-neutral-200 px-3 py-1.5 text-sm hover:border-sky-400 outline-none placeholder:text-neutral-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 disabled:bg-slate-50 disabled:text-slate-400"
+  [class.border-red-400]="errorText()"
+  [attr.aria-invalid]="errorText() ? true : null"
+  [attr.aria-describedby]="describedBy()"
+/>
+
+@if (errorText(); as message) {
+  <p [id]="controlId + '-error'" class="mt-1.5 text-xs text-red-600">{{ message }}</p>
+} @else if (hint()) {
+  <p [id]="controlId + '-hint'" class="mt-1.5 text-xs text-slate-500">{{ hint() }}</p>
+}

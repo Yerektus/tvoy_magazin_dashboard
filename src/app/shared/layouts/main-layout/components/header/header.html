@@ -1,0 +1,37 @@
+<div class="px-4 sm:px-6">
+  <div class="flex h-14 items-center justify-between">
+    <span class="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+      <app-button
+        variant="ghost"
+        [icon]="true"
+        [ariaLabel]="menuLabel()"
+        [ariaExpanded]="sidebarOpen()"
+        (click)="toggleSidebar.emit()"
+      >
+        <app-icon [icon]="menuIcon()" [size]="18" />
+      </app-button>
+
+      @if (page.crumbs().length) {
+        <app-breadcrumbs [items]="page.crumbs()" />
+      } @else {
+        <span class="text-md font-normal">{{ title() }}</span>
+      }
+    </span>
+
+    <!-- Сюда лейаут кладёт выбор магазина подключённого расширения.
+         Кто вошёл и выход — внизу сайдбара, в строке шапки им тесно. -->
+    <div class="flex shrink-0 items-center gap-4">
+      <ng-content select="[headerActions]" />
+    </div>
+  </div>
+
+  @if (page.tabs().length) {
+    <app-tabs
+      class="no-scrollbar -mb-px overflow-x-auto"
+      [items]="page.tabs()"
+      [active]="page.activeTab()"
+      [badges]="page.badges()"
+      (selected)="page.selectTab($event)"
+    />
+  }
+</div>

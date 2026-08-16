@@ -1,0 +1,33 @@
+@if (editing()) {
+  <!-- size="1" убирает собственную ширину поля (по умолчанию ~20 символов):
+       без него таблица раздвигает колонку под неё, а не под содержимое. -->
+  <input
+    #field
+    type="text"
+    size="1"
+    [value]="draft()"
+    (input)="onInput($event)"
+    (blur)="save()"
+    (keydown.enter)="save()"
+    (keydown.escape)="cancel()"
+    class="block w-full rounded-sm border border-sky-400 px-1 bg-white py-0.5 leading-5 outline-none focus:ring-2 focus:ring-sky-400/20"
+    [class]="alignClass()"
+  />
+} @else {
+  <!-- Прозрачная рамка держит те же размеры, что и поле ввода:
+       иначе ячейка подпрыгивает при переходе в правку. -->
+  <button
+    type="button"
+    (click)="start()"
+    [disabled]="disabled()"
+    [title]="disabled() ? '' : 'Нажмите, чтобы исправить'"
+    class="block w-full cursor-text rounded-sm border border-transparent py-0.5 leading-5 break-words whitespace-normal transition hover:bg-neutral-100 disabled:cursor-default disabled:hover:bg-transparent"
+    [class]="alignClass()"
+  >
+    @if (text()) {
+      {{ text() }}
+    } @else {
+      <span class="text-neutral-300">{{ placeholder() }}</span>
+    }
+  </button>
+}

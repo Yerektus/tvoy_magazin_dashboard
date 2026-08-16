@@ -1,0 +1,39 @@
+<button
+  type="button"
+  aria-haspopup="listbox"
+  class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-sm border border-neutral-200 bg-white px-3 py-1.5 text-sm transition outline-none hover:border-sky-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 disabled:cursor-default disabled:bg-slate-50 disabled:text-slate-400"
+  [attr.aria-label]="ariaLabel() || null"
+  [attr.aria-expanded]="open()"
+  [disabled]="disabled()"
+  (click)="toggle()"
+>
+  <span class="truncate" [class.text-neutral-400]="!current()">{{ label() }}</span>
+
+  <app-icon [icon]="chevronIcon" [size]="16" class="shrink-0 text-neutral-400" />
+</button>
+
+@if (open()) {
+  <div
+    role="listbox"
+    class="animate-fade-in absolute right-0 z-20 max-h-64 min-w-full overflow-y-auto rounded-sm border border-neutral-200 bg-white py-1 shadow-lg motion-reduce:animate-none"
+    [class]="up() ? 'bottom-full mb-1' : 'top-full mt-1'"
+  >
+    @for (option of options(); track option.value) {
+      <button
+        type="button"
+        role="option"
+        class="flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-1.5 text-left text-sm transition hover:bg-neutral-100"
+        [attr.aria-selected]="option.value === value()"
+        (click)="choose(option)"
+      >
+        <span class="truncate">{{ option.label }}</span>
+
+        @if (option.value === value()) {
+          <app-icon [icon]="checkIcon" [size]="14" class="shrink-0 text-sky-600" />
+        }
+      </button>
+    } @empty {
+      <p class="px-3 py-1.5 text-sm text-neutral-500">Выбирать пока не из чего</p>
+    }
+  </div>
+}

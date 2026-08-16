@@ -1,0 +1,192 @@
+@if (loading()) {
+  <div class="mt-10 flex justify-center text-neutral-400">
+    <app-spinner [size]="24" />
+  </div>
+} @else if (!connected()) {
+  <div class="max-w-xl rounded-sm border border-neutral-200 p-4">
+    <p class="text-sm font-medium">Расширение не подключено</p>
+    <p class="mt-1 text-sm text-neutral-500">
+      Планирование закупов считает по продажам и остаткам из UMAG. Подключите его на странице
+      расширения — данные уже есть, настраивать ничего не нужно.
+    </p>
+
+    <a
+      routerLink="/settings/planning"
+      class="mt-4 inline-block text-sm text-sky-600 hover:text-sky-700"
+    >
+      Открыть расширение →
+    </a>
+  </div>
+} @else {
+  <app-toolbar class="mb-4">
+    @if (groups().length) {
+      <p class="text-sm text-neutral-500">
+        Поставщиков: <span class="text-black">{{ groups().length }}</span>
+      </p>
+    }
+
+    <div toolbarActions class="flex items-center gap-1">
+      <!-- Порядок групп меняется на месте: пересчитывать план для этого не нужно. -->
+      @if (groups().length) {
+        <app-menu [customTrigger]="true" ariaLabel="Порядок поставщиков">
+          <app-button appMenuTrigger variant="ghost" [icon]="true" ariaLabel="Порядок поставщиков">
+            <app-icon [icon]="sortIcon" [size]="18" />
+          </app-button>
+
+          @for (item of sorts; track item.value) {
+            <button appMenuItem (click)="setSort(item.value)">
+              {{ item.label }}
+
+              @if (sort() === item.value) {
+                <app-icon [icon]="chosenIcon" [size]="14" class="ml-auto text-sky-600" />
+              }
+            </button>
+          }
+        </app-menu>
+      }
+
+      <!-- Настройки расчёта и пересчёт живут в одном меню: по отдельности они
+           занимали всю панель, а нужны редко. -->
+      <div class="relative" #filter>
+        <app-button
+          variant="ghost"
+          [icon]="true"
+          ariaLabel="Настройки расчёта"
+          [ariaExpanded]="filterOpen()"
+          (click)="filterOpen.set(!filterOpen())"
+        >
+          <app-icon [icon]="filterIcon" [size]="18" />
+        </app-button>
+
+        @if (filterOpen()) {
+          <div
+            class="animate-fade-in absolute right-0 z-20 mt-1 w-60 rounded-sm border border-neutral-200 bg-white p-3 shadow-lg motion-reduce:animate-none"
+          >
+            <app-select
+              class="w-full mb-2"
+              [options]="periods"
+              [value]="days()"
+              ariaLabel="Период анализа"
+              [disabled]="busy() || building()"
+              (selected)="setDays($event)"
+            />
+
+            <app-select
+              class="mb-2 w-full"
+              [options]="horizons"
+              [value]="horizon()"
+              ariaLabel="Горизонт закупа"
+              [disabled]="busy() || building()"
+              (selected)="setHorizon($event)"
+            />
+
+            <app-button
+              class="block"
+              variant="primary"
+              [fullWidth]="true"
+              [loading]="busy() || building()"
+              (click)="apply()"
+            >
+              <span class="flex items-center justify-center gap-2">
+                <app-icon [icon]="retryIcon" />
+                Применить
+              </span>
+            </app-button>
+          </div>
+        }
+      </div>
+    </div>
+  </app-toolbar>
+
+  @if (plan(); as plan) {
+    @switch (plan.status) {
+      @case ('building') {
+        <p class="mt-4 flex items-center gap-2 text-sm text-neutral-500">
+          <app-spinner />
+          Считаем: продажи за {{ plan.days }} дней, остатки и поставщиков в «{{ plan.store_name }}»
+        </p>
+      }
+
+      @case ('failed') {
+        <p class="mt-4 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {{ plan.error || 'Не удалось посчитать план' }}
+        </p>
+      }
+    }
+  } @else {
+    <p class="mt-4 text-sm text-neutral-500">
+      Плана ещё нет. Нажмите «Посчитать план» — это займёт около минуты.
+    </p>
+  }
+
+  @if (!groups().length && !building()) {
+    <p class="mt-6 text-sm text-neutral-500">Всего хватает — заказывать нечего</p>
+  }
+
+  <!-- Заказ едет поставщику целиком, поэтому план разложен по ним. Первым
+       раскрыт тот, у кого лежит самое горящее. -->
+  @for (group of groups(); track group.supplier) {
+    <details
+      class="group border-b border-neutral-100"
+      [open]="opened().has(group.supplier)"
+      (toggle)="toggled(group.supplier, $event)"
+    >
+      <summary
+        class="flex cursor-pointer list-none items-center gap-3 py-3 px-3 transition hover:bg-neutral-100"
+      >
+        <app-icon
+          [icon]="openIcon"
+          [size]="16"
+          class="shrink-0 text-neutral-400 transition group-open:rotate-90"
+        />
+
+        <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ group.supplier }}</span>
+      </summary>
+
+      @if (opened().has(group.supplier)) {
+        <app-table
+          class="block pb-4"
+          minWidth="min-w-[56rem]"
+          [rows]="group.items"
+          [trackKey]="trackItem"
+        >
+          <ng-template appTableColumn="name" header="Товар" width="w-60" let-item>
+            <p class="break-words">{{ item.name }}</p>
+            <p class="mt-0.5 text-neutral-400">{{ item.barcode || 'без штрихкода' }}</p>
+          </ng-template>
+
+          <ng-template appTableColumn="stock" header="Остаток" width="w-28" let-item>
+            <p [class]="isOut(item) ? 'text-red-600' : ''">
+              {{ formatAmount(item.stock) }} {{ item.measure }}
+            </p>
+            <p class="mt-0.5 text-neutral-400">{{ formatAmount(item.per_day) }} в день</p>
+          </ng-template>
+
+          <ng-template appTableColumn="cover" header="Хватит на" width="w-32" let-item>
+            <span
+              class="flex items-center gap-2 whitespace-nowrap"
+              [class]="isOut(item) ? 'text-red-600' : 'text-amber-600'"
+            >
+              <app-icon [icon]="isOut(item) ? outIcon : lowIcon" />
+              {{ formatCover(item.cover_days) }}
+            </span>
+          </ng-template>
+
+          <ng-template
+            appTableColumn="suggested"
+            header="Заказать"
+            width="w-28"
+            align="right"
+            let-item
+          >
+            <span class="font-medium">{{ formatAmount(item.suggested) }} {{ item.measure }}</span>
+          </ng-template>
+
+          <ng-template appTableColumn="cost" header="На сумму" width="w-32" align="right" let-item>
+            <span class="text-neutral-500">{{ formatMoney(item.cost) }}</span>
+          </ng-template>
+        </app-table>
+      }
+    </details>
+  }
+}

@@ -1,0 +1,40 @@
+<div class="flex min-h-dvh items-center justify-center px-4">
+  <div class="w-full max-w-sm">
+    <form
+      [formGroup]="form"
+      (ngSubmit)="submit()"
+      novalidate
+    >
+      <div class="w-full flex justify-center mb-8">
+        <h2 class="text-2xl">Добро пожаловать</h2>
+      </div>
+
+      <div class="mb-4">
+        <app-text-field
+          formControlName="email"
+          label="Почта"
+          type="email"
+          placeholder="Ваша почта"
+          autocomplete="email"
+          [errorMessages]="{ required: 'Введите почту' }"
+        />
+      </div>
+
+      <div class="mb-5">
+        <app-text-field
+          formControlName="password"
+          label="Пароль"
+          type="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          [errorMessages]="{ required: 'Введите пароль' }"
+        />
+      </div>
+
+      <app-button type="submit" [fullWidth]="true" [loading]="submitting()">
+        Войти
+      </app-button>
+
+    </form>
+  </div>
+</div>

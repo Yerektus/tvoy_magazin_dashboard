@@ -1,0 +1,13 @@
+@if (linked()) {
+  @if (labels(); as labels) {
+    <app-select
+      [class]="width()"
+      [options]="items()"
+      [value]="account()?.targetId ?? null"
+      [placeholder]="'Выберите ' + labels.target.toLowerCase()"
+      [ariaLabel]="labels.target"
+      [disabled]="busy()"
+      (selected)="choose($event)"
+    />
+  }
+}

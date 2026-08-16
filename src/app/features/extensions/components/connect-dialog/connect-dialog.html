@@ -1,0 +1,54 @@
+<app-modal [open]="open()" [title]="'Подключение ' + extension().name" (closed)="close()">
+  <form class="grid gap-4" [formGroup]="form" (ngSubmit)="connect()">
+    <app-text-field
+      formControlName="login"
+      [label]="labels().login"
+      [type]="labels().loginType"
+      [inputMode]="labels().loginType === 'tel' ? 'tel' : ''"
+      [placeholder]="labels().loginPlaceholder"
+      autocomplete="username"
+    />
+
+    <app-text-field
+      formControlName="password"
+      label="Пароль"
+      type="password"
+      autocomplete="current-password"
+    />
+
+    @if (identities().length) {
+      <div>
+        <p class="text-sm font-medium">{{ labels().identity }}</p>
+        <p class="mt-1 text-sm text-neutral-500">{{ labels().identityHint }}</p>
+
+        <ul class="mt-2">
+          @for (identity of identities(); track identity.id) {
+            <li class="border-b border-neutral-100 last:border-0">
+              <button
+                type="button"
+                class="w-full cursor-pointer py-2.5 text-left text-sm hover:text-sky-600"
+                [disabled]="busy()"
+                (click)="connect(identity.id)"
+              >
+                {{ identity.label }}
+              </button>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    <!-- Чтобы Enter в поле отправлял форму: кнопка входа живёт в подвале окна. -->
+    <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+  </form>
+
+  <div modalActions class="flex gap-2">
+    <app-button [disabled]="busy()" (click)="close()">Отмена</app-button>
+
+    @if (!identities().length) {
+      <app-button variant="primary" [loading]="busy()" (click)="connect()">
+        Войти в {{ extension().name }}
+      </app-button>
+    }
+  </div>
+</app-modal>

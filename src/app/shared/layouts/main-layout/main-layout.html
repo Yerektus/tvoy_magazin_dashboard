@@ -1,0 +1,44 @@
+<div class="min-h-dvh bg-white">
+  <div class="flex">
+    <app-sidebar
+      [items]="nav()"
+      [open]="sidebarOpen()"
+      [user]="user()"
+      (navigated)="closeOnPhone()"
+      (logout)="logout()"
+    >
+      <!-- Обёртка статична: содержимое `@if` проекция по атрибуту не находит. -->
+      <span sidebarActions class="contents">
+        @if (!wide()) {
+          <div class="mb-3">
+            <app-target-picker slug="umag" width="w-full" />
+          </div>
+        }
+      </span>
+    </app-sidebar>
+
+    @if (sidebarOpen()) {
+      <!-- Затемнение только на телефоне: там сайдбар лежит поверх страницы. -->
+      <div
+        class="animate-fade-in fixed inset-0 z-30 bg-neutral-900/30 lg:hidden"
+        (click)="sidebarOpen.set(false)"
+      ></div>
+    }
+    <div class="min-w-0 flex-1">
+      <app-header
+        [title]="pageTitle()"
+        [sidebarOpen]="sidebarOpen()"
+        (toggleSidebar)="sidebarOpen.set(!sidebarOpen())"
+      >
+        <span headerActions class="contents">
+          @if (wide()) {
+            <app-target-picker slug="umag" />
+          }
+        </span>
+      </app-header>
+      <main class="min-w-0 px-4 py-6 sm:px-6">
+        <router-outlet />
+      </main>
+    </div>
+  </div>
+</div>

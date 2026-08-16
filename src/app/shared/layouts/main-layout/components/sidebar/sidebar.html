@@ -1,0 +1,44 @@
+<div class="flex h-full w-56 flex-col">
+  <div class="flex h-14 items-center px-3">
+    <span class="text-xl px-2 font-normal">Твой магазин</span>
+  </div>
+
+  <nav class="flex flex-col gap-1 p-3">
+    @for (item of items(); track item.label) {
+      @if (item.route) {
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="bg-neutral-200 font-medium text-neutral-900"
+          class="rounded-sm px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-neutral-200 hover:text-neutral-900"
+        >
+          {{ item.label }}
+        </a>
+      } @else {
+        <span class="rounded-sm px-3 py-1.5 text-sm text-neutral-400" title="Скоро">{{
+          item.label
+        }}</span>
+      }
+    }
+  </nav>
+
+  <!-- Внизу — кто вошёл. Раньше это жило в шапке, но там место нужнее крошкам.
+       Туда же лейаут кладёт выбор магазина на телефоне. -->
+  <div class="mt-auto p-3">
+    <ng-content select="[sidebarActions]" />
+
+    <app-menu class="w-full" [customTrigger]="true" [fullWidth]="true" ariaLabel="Меню профиля">
+      <button
+        appMenuTrigger
+        class="flex w-full cursor-pointer items-center gap-2 rounded-sm p-1 text-left transition hover:bg-neutral-200"
+      >
+        <app-avatar [email]="user()" />
+        <span class="min-w-0 flex-1 truncate text-sm text-neutral-500">{{ user() }}</span>
+      </button>
+
+      <button appMenuItem class="text-red-600" (click)="logout.emit()">
+        <app-icon [icon]="logoutIcon" [size]="14" />
+        Выйти
+      </button>
+    </app-menu>
+  </div>
+</div>

@@ -1,0 +1,100 @@
+<app-toolbar>
+  <p class="text-sm text-neutral-500">
+    Всего: <span class="text-black">{{ total() }}</span>
+  </p>
+
+  <div toolbarActions>
+    <app-button variant="primary" (click)="dialogOpen.set(true)">
+      <span class="flex items-center gap-2">
+        <app-icon [icon]="addIcon" />
+        Добавить документ
+      </span>
+    </app-button>
+  </div>
+</app-toolbar>
+
+<ng-template #selectAll>
+  <app-checkbox
+    ariaLabel="Выбрать все документы"
+    [checked]="allSelected()"
+    [indeterminate]="someSelected()"
+    (toggled)="toggleAll()"
+  />
+</ng-template>
+
+<app-table
+  class="mt-4 block"
+  minWidth="min-w-[56rem]"
+  [rows]="documents()"
+  [trackKey]="trackById"
+  [loading]="loading()"
+  [empty]="emptyText()"
+  [clickable]="true"
+  (rowClick)="open($event)"
+>
+  <ng-template appTableColumn="select" [headerTemplate]="selectAll" width="w-10" let-document>
+    <app-checkbox
+      class="mt-0.5"
+      [ariaLabel]="'Выбрать ' + documentTitle(document)"
+      [checked]="isSelected(document.id)"
+      (toggled)="toggle(document.id)"
+    />
+  </ng-template>
+
+  <ng-template appTableColumn="sender" header="Отправитель" width="w-64" let-document>
+    <p class="break-words">{{ document.supplier || 'Поставщик не распознан' }}</p>
+    <p class="mt-0.5 break-words text-neutral-400">{{ document.supplier_bin || '—' }}</p>
+  </ng-template>
+
+  <ng-template appTableColumn="title" header="Документ" width="w-72" let-document>
+    <a
+      [routerLink]="['/documents', document.id]"
+      class="block font-normal break-words hover:text-sky-600"
+    >
+      {{ documentTitle(document) }}
+    </a>
+    <p class="mt-0.5 text-neutral-400">Позиций: {{ document.lines_count }}</p>
+  </ng-template>
+
+  <ng-template appTableColumn="status" header="Статус" width="w-40" let-document>
+    <span
+      class="flex items-center gap-2 whitespace-nowrap"
+      [class]="statusClasses(document.status)"
+    >
+      <app-icon [icon]="statusIcon(document.status)" />
+      {{ statusLabel(document.status) }}
+    </span>
+  </ng-template>
+
+  <ng-template appTableColumn="time" header="Дата" width="w-28" let-document>
+    <p class="whitespace-nowrap text-neutral-500">{{ formatDate(document.created_at) }}</p>
+    <p class="mt-0.5 whitespace-nowrap text-neutral-400">{{ formatTime(document.created_at) }}</p>
+  </ng-template>
+
+  <ng-template appTableColumn="actions" width="w-12" align="right" let-document>
+    <app-menu ariaLabel="Действия с накладной">
+      <button appMenuItem (click)="open(document)">
+        <app-icon [icon]="openIcon" [size]="14" />
+        Открыть
+      </button>
+
+      @if (document.status === 'done') {
+        <button appMenuItem class="text-emerald-700" (click)="check(document)">
+          <app-icon [icon]="checkedIcon" [size]="14" />
+          Проверено
+        </button>
+      }
+
+      <button appMenuItem class="text-red-600" (click)="remove(document)">
+        <app-icon [icon]="removeIcon" [size]="14" />
+        Удалить
+      </button>
+    </app-menu>
+  </ng-template>
+</app-table>
+
+<app-add-document-dialog
+  [open]="dialogOpen()"
+  (closed)="dialogOpen.set(false)"
+  (uploaded)="onUploaded()"
+/>

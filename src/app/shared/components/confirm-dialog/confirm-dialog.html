@@ -1,0 +1,19 @@
+@if (confirm.request(); as request) {
+  <app-modal [open]="open()" [title]="request.title" (closed)="confirm.answer(false)">
+    <p class="text-sm text-neutral-600">{{ request.message }}</p>
+
+    <div modalActions class="flex gap-2">
+      <app-button (click)="confirm.answer(false)">Отмена</app-button>
+
+      @if (request.danger) {
+        <app-button (click)="confirm.answer(true)">
+          <span class="text-red-600">{{ request.confirmLabel ?? 'Удалить' }}</span>
+        </app-button>
+      } @else {
+        <app-button variant="primary" (click)="confirm.answer(true)">
+          {{ request.confirmLabel ?? 'Подтвердить' }}
+        </app-button>
+      }
+    </div>
+  </app-modal>
+}

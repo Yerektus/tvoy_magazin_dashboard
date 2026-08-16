@@ -1,0 +1,25 @@
+<div class="pointer-events-none fixed right-4 bottom-4 z-50 flex flex-col gap-2">
+  @for (toast of toasts.toasts(); track toast.id) {
+    <div
+      role="status"
+      title="Смахните, чтобы закрыть"
+      (pointerdown)="onPointerDown($event, toast.id)"
+      (pointermove)="onPointerMove($event)"
+      (pointerup)="onPointerUp($event)"
+      (pointercancel)="onPointerUp($event)"
+      class="animate-modal-in pointer-events-auto flex w-[calc(100vw-2rem)] max-w-80 touch-pan-y cursor-grab items-start gap-3 rounded-sm border border-neutral-200 bg-white px-3 py-2.5 shadow-lg select-none active:cursor-grabbing motion-reduce:animate-none"
+      [class.transition-transform]="draggingId() !== toast.id"
+      [style.transform]="'translateX(' + shift(toast.id) + 'px)'"
+      [style.opacity]="opacity(toast.id)"
+    >
+      <app-icon
+        class="mt-0.5"
+        [icon]="icon(toast.kind)"
+        [size]="18"
+        [class]="classes(toast.kind)"
+      />
+
+      <p class="min-w-0 flex-1 text-sm">{{ toast.text }}</p>
+    </div>
+  }
+</div>

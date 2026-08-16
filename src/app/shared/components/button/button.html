@@ -1,0 +1,16 @@
+<button
+  [type]="type()"
+  [disabled]="disabled() || loading()"
+  [class]="classes()"
+  [attr.aria-label]="ariaLabel() || null"
+  [attr.aria-expanded]="ariaExpanded()"
+  [attr.aria-busy]="loading() ? true : null"
+>
+  @if (loading()) {
+    <span class="flex items-center justify-center">
+      <app-spinner />
+    </span>
+  } @else {
+    <ng-content />
+  }
+</button>

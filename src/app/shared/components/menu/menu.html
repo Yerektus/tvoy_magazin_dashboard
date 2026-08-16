@@ -1,0 +1,29 @@
+@if (!customTrigger()) {
+  <app-button
+    variant="ghost"
+    [icon]="true"
+    [ariaLabel]="ariaLabel()"
+    [ariaExpanded]="open()"
+    (click)="toggle()"
+  >
+    <app-icon [icon]="menuIcon" />
+  </app-button>
+}
+
+<!-- Своя кнопка, если её принесли: слот всегда на месте, чтобы проекция
+     не зависела от условия. -->
+<ng-content select="[appMenuTrigger]" />
+
+@if (open()) {
+  <div
+    #panel
+    role="menu"
+    class="animate-fade-in fixed z-50 rounded-sm border border-neutral-200 bg-white py-1 shadow-lg motion-reduce:animate-none"
+    [style.top.px]="position().top"
+    [style.left.px]="position().left"
+    [style.width.px]="position().width"
+    (click)="close()"
+  >
+    <ng-content />
+  </div>
+}

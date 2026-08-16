@@ -1,0 +1,33 @@
+@if (rendered()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      class="absolute inset-0 bg-neutral-900/30 motion-reduce:animate-none"
+      [class]="leaving() ? 'animate-fade-out' : 'animate-fade-in'"
+      (click)="closed.emit()"
+    ></div>
+
+    <div
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="title() || null"
+      class="relative z-10 w-full rounded-sm border border-neutral-200 bg-white shadow-lg motion-reduce:animate-none"
+      [class]="widthClass() + ' ' + (leaving() ? 'animate-modal-out' : 'animate-modal-in')"
+    >
+      <div class="flex items-center justify-between gap-4 px-4 py-3">
+        <h2 class="text-md font-normal">{{ title() }}</h2>
+
+        <app-button variant="ghost" [icon]="true" ariaLabel="Закрыть" (click)="closed.emit()">
+          <app-icon [icon]="closeIcon" />
+        </app-button>
+      </div>
+
+      <div class="p-4">
+        <ng-content />
+      </div>
+
+      <div class="flex justify-end gap-2 px-4 py-3">
+        <ng-content select="[modalActions]" />
+      </div>
+    </div>
+  </div>
+}
