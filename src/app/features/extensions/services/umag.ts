@@ -23,13 +23,25 @@ export class Umag implements ExtensionProvider {
 
   private readonly state = signal<ExtensionAccount | null>(null);
 
+  /** Запрос состояния, который уже в пути: второй такой же не нужен. */
+  private pending: Promise<ExtensionAccount> | null = null;
+
   readonly account = this.state.asReadonly();
   /** Готовы отправлять: вход есть и магазин выбран. */
   readonly connected = computed(() => this.state()?.connected === true);
 
-  /** Состояние подключения. Запрашивается один раз на загрузку страницы. */
+  /**
+   * Состояние подключения. Запрашивается один раз на загрузку страницы: шапка
+   * и открытая страница спрашивают его одновременно, но ходим мы один раз.
+   */
   async load(): Promise<ExtensionAccount> {
-    return this.save(await this.request<UmagAccount>('get', 'account/'));
+    this.pending ??= this.request<UmagAccount>('get', 'account/')
+      .then((account) => this.save(account))
+      .finally(() => {
+        this.pending = null;
+      });
+
+    return this.pending;
   }
 
   /**

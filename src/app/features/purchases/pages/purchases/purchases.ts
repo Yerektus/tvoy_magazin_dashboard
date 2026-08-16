@@ -6,6 +6,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -20,6 +21,7 @@ import {
 } from 'lucide';
 
 import { Button } from '../../../../shared/components/button/button';
+import { Empty } from '../../../../shared/components/empty/empty';
 import { Icon } from '../../../../shared/components/icon/icon';
 import {
   Select,
@@ -33,6 +35,7 @@ import { Table } from '../../../../shared/components/table/table';
 import { TableColumn } from '../../../../shared/components/table/table-column';
 import { Toolbar } from '../../../../shared/components/toolbar/toolbar';
 import { Toasts } from '../../../../shared/services/toasts';
+import { Umag } from '../../../extensions/services/umag';
 import {
   type PurchasePlan,
   type PurchasePlanItem,
@@ -49,6 +52,9 @@ import { Planning } from '../../services/planning';
 
 /** Пока план считается, спрашиваем его так же часто, как статус накладной. */
 const POLL_INTERVAL = 2500;
+
+/** Столько же длится `accordion-out` в `styles.css`. */
+const COLLAPSE_MS = 200;
 
 // Подписи внутри самих пунктов: в панели над таблицей ярлыкам сбоку места нет,
 // а «Месяц» без пояснения ни о чём не говорит.
@@ -84,6 +90,7 @@ const HORIZONS: SelectOption[] = [
   selector: 'app-purchases',
   imports: [
     Button,
+    Empty,
     Icon,
     Menu,
     MenuItem,
@@ -134,9 +141,16 @@ export class Purchases {
   protected readonly horizon = signal(14);
 
   private readonly planning = inject(Planning);
+  private readonly umag = inject(Umag);
   private readonly toasts = inject(Toasts);
 
   protected readonly connected = this.planning.connected;
+
+  /**
+   * Магазин, выбранный в шапке: план всегда по нему. `undefined` — про UMAG
+   * ещё не спрашивали, и за планом рано: он приедет не тот, что нужен.
+   */
+  private readonly store = computed(() => this.umag.account()?.targetId);
 
   protected readonly items = computed<PurchasePlanItem[]>(() => this.plan()?.items ?? []);
   protected readonly building = computed(() => isBuilding(this.plan()));
@@ -160,38 +174,73 @@ export class Purchases {
    */
   protected readonly opened = signal<ReadonlySet<string>>(new Set());
 
+  /** Те, у кого таблица уже сворачивается: она нужна, пока играет анимация. */
+  private readonly closing = signal<ReadonlySet<string>>(new Set());
+
+  /** Кого рисуем: раскрытые и те, что ещё закрываются. */
+  protected readonly visible = computed(() => new Set([...this.opened(), ...this.closing()]));
+
   protected readonly trackItem = (item: PurchasePlanItem) => item.position;
 
   private readonly filter = viewChild<ElementRef<HTMLElement>>('filter');
 
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
 
+  /** Таймеры сворачивания: по одному на группу, которая сейчас закрывается. */
+  private readonly collapseTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  /**
+   * Номер загрузки. Магазин успевают переключить дважды подряд, а ответы
+   * приходят в своём порядке: чужой план на экран пускать нельзя.
+   */
+  private version = 0;
+
   constructor() {
     // Новый план — раскрываем первого поставщика: у него самое горящее.
     effect(() => {
       const [first] = this.groups();
+
+      this.stopCollapsing();
       this.opened.set(first ? new Set([first.supplier]) : new Set());
     });
 
-    void this.load();
+    // Магазин переключают в шапке. Это другой план, а не другой вид того же,
+    // поэтому страница загружается заново — с заглушками вместо старых строк.
+    effect(() => {
+      if (this.store() !== undefined) {
+        untracked(() => void this.load());
+      }
+    });
 
-    inject(DestroyRef).onDestroy(() => this.stopPolling());
+    void this.start();
+
+    inject(DestroyRef).onDestroy(() => {
+      this.stopPolling();
+      this.stopCollapsing();
+    });
   }
 
-  protected toggled(supplier: string, event: Event): void {
-    const open = (event.target as HTMLDetailsElement).open;
+  /** Раскрывает и сворачивает группу поставщика. */
+  protected toggle(supplier: string): void {
+    this.clearCollapseTimer(supplier);
 
-    this.opened.update((current) => {
-      const next = new Set(current);
+    if (!this.opened().has(supplier)) {
+      this.closing.update((current) => without(current, supplier));
+      this.opened.update((current) => added(current, supplier));
+      return;
+    }
 
-      if (open) {
-        next.add(supplier);
-      } else {
-        next.delete(supplier);
-      }
+    this.opened.update((current) => without(current, supplier));
+    this.closing.update((current) => added(current, supplier));
 
-      return next;
-    });
+    // Анимация доиграла — таблицу можно убирать из разметки.
+    this.collapseTimers.set(
+      supplier,
+      setTimeout(() => {
+        this.collapseTimers.delete(supplier);
+        this.closing.update((current) => without(current, supplier));
+      }, COLLAPSE_MS),
+    );
   }
 
   /** Клик мимо меню настроек закрывает его. */
@@ -227,10 +276,19 @@ export class Purchases {
       return;
     }
 
+    const version = this.version;
+
     this.busy.set(true);
 
     try {
-      this.plan.set(await this.planning.rebuild(this.days(), this.horizon()));
+      const plan = await this.planning.rebuild(this.days(), this.horizon());
+
+      // Магазин переключили, пока считалось: страница уже грузит его план.
+      if (version !== this.version) {
+        return;
+      }
+
+      this.plan.set(plan);
       this.poll();
     } catch (error) {
       this.toasts.error(error instanceof Error ? error.message : 'Не удалось посчитать план');
@@ -239,7 +297,35 @@ export class Purchases {
     }
   }
 
+  /**
+   * Узнаёт выбранный магазин, если шапка ещё не успела: без него неизвестно,
+   * чей план показывать, и страница осталась бы с заглушками навсегда.
+   */
+  private async start(): Promise<void> {
+    if (this.umag.account() !== null) {
+      return;
+    }
+
+    try {
+      await this.umag.load();
+    } catch (error) {
+      // Шапка спрашивает то же самое: если у неё получилось, молчим.
+      if (this.umag.account() === null) {
+        this.loading.set(false);
+        this.toasts.error(error instanceof Error ? error.message : 'Не удалось открыть план');
+      }
+    }
+  }
+
+  /** Загружает план выбранного магазина. Пока он едет, на странице заглушки. */
   private async load(): Promise<void> {
+    const version = ++this.version;
+
+    this.stopPolling();
+    this.loading.set(true);
+    // Прошлый магазин закрываем сразу: его план к выбранному отношения не имеет.
+    this.plan.set(null);
+
     try {
       // Состояние расширения нужно, чтобы отличить «не подключено» от «нет плана».
       if (this.planning.account() === null) {
@@ -247,6 +333,12 @@ export class Purchases {
       }
 
       const plan = await this.planning.plan();
+
+      // Магазин успели переключить — этот план уже никому не нужен.
+      if (version !== this.version) {
+        return;
+      }
+
       this.plan.set(plan);
 
       if (plan) {
@@ -256,9 +348,15 @@ export class Purchases {
 
       this.poll();
     } catch (error) {
+      if (version !== this.version) {
+        return;
+      }
+
       this.toasts.error(error instanceof Error ? error.message : 'Не удалось открыть план');
     } finally {
-      this.loading.set(false);
+      if (version === this.version) {
+        this.loading.set(false);
+      }
     }
   }
 
@@ -270,9 +368,18 @@ export class Purchases {
       return;
     }
 
+    const version = this.version;
+
     this.pollTimer = setTimeout(async () => {
       try {
-        this.plan.set(await this.planning.plan());
+        const plan = await this.planning.plan();
+
+        // Пока спрашивали, магазин сменили: этот ответ уже про чужой план.
+        if (version !== this.version) {
+          return;
+        }
+
+        this.plan.set(plan);
       } catch {
         // Сеть моргнула — попробуем на следующем круге.
       }
@@ -301,4 +408,35 @@ export class Purchases {
       this.pollTimer = null;
     }
   }
+
+  private clearCollapseTimer(supplier: string): void {
+    const timer = this.collapseTimers.get(supplier);
+
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.collapseTimers.delete(supplier);
+    }
+  }
+
+  /** Новый план или уход со страницы — досматривать анимации некому. */
+  private stopCollapsing(): void {
+    for (const timer of this.collapseTimers.values()) {
+      clearTimeout(timer);
+    }
+
+    this.collapseTimers.clear();
+    this.closing.set(new Set());
+  }
+}
+
+/** Множество в сигнале меняем копией: правку на месте он не заметит. */
+function added(current: ReadonlySet<string>, value: string): ReadonlySet<string> {
+  return new Set(current).add(value);
+}
+
+function without(current: ReadonlySet<string>, value: string): ReadonlySet<string> {
+  const next = new Set(current);
+  next.delete(value);
+
+  return next;
 }

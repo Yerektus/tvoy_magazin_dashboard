@@ -1,2 +1,7 @@
-/** Адрес бэкенда «Твоего магазина». Для продакшена меняется здесь. */
-export const API_BASE_URL = 'http://localhost:8000/api';
+import { environment } from '../../../environments/environment';
+
+/**
+ * Адрес бэкенда «Твоего магазина». Значение приходит из окружения: при сборке
+ * для разработки Angular подменяет `environment.ts` на `environment.development.ts`.
+ */
+export const API_BASE_URL = environment.apiUrl;

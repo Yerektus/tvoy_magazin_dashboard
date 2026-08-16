@@ -1,22 +1,21 @@
 @if (loading()) {
-  <div class="mt-10 flex justify-center text-neutral-400">
+  <!-- Посреди страницы: пока план едет, на ней всё равно больше ничего нет. -->
+  <div class="flex min-h-[70vh] items-center justify-center text-neutral-400">
     <app-spinner [size]="24" />
   </div>
 } @else if (!connected()) {
-  <div class="max-w-xl rounded-sm border border-neutral-200 p-4">
-    <p class="text-sm font-medium">Расширение не подключено</p>
-    <p class="mt-1 text-sm text-neutral-500">
-      Планирование закупов считает по продажам и остаткам из UMAG. Подключите его на странице
-      расширения — данные уже есть, настраивать ничего не нужно.
-    </p>
+  <app-empty title="Расширение не подключено">
+    Планирование закупов считает по продажам и остаткам из UMAG. Подключите его на странице
+    расширения — данные уже есть, настраивать ничего не нужно.
 
     <a
+      emptyAction
       routerLink="/settings/planning"
       class="mt-4 inline-block text-sm text-sky-600 hover:text-sky-700"
     >
       Открыть расширение →
     </a>
-  </div>
+  </app-empty>
 } @else {
   <app-toolbar class="mb-4">
     @if (groups().length) {
@@ -126,67 +125,84 @@
   <!-- Заказ едет поставщику целиком, поэтому план разложен по ним. Первым
        раскрыт тот, у кого лежит самое горящее. -->
   @for (group of groups(); track group.supplier) {
-    <details
-      class="group border-b border-neutral-100"
-      [open]="opened().has(group.supplier)"
-      (toggle)="toggled(group.supplier, $event)"
-    >
-      <summary
-        class="flex cursor-pointer list-none items-center gap-3 py-3 px-3 transition hover:bg-neutral-100"
+    <div class="border-b border-neutral-100">
+      <button
+        type="button"
+        class="flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-left select-none"
+        [attr.aria-expanded]="opened().has(group.supplier)"
+        (click)="toggle(group.supplier)"
       >
         <app-icon
           [icon]="openIcon"
           [size]="16"
-          class="shrink-0 text-neutral-400 transition group-open:rotate-90"
+          class="shrink-0 text-neutral-400 transition-transform duration-200 motion-reduce:transition-none"
+          [class.rotate-90]="opened().has(group.supplier)"
         />
 
         <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ group.supplier }}</span>
-      </summary>
+      </button>
 
-      @if (opened().has(group.supplier)) {
-        <app-table
-          class="block pb-4"
-          minWidth="min-w-[56rem]"
-          [rows]="group.items"
-          [trackKey]="trackItem"
+      <!-- Закрытая группа держится в разметке, пока играет анимация: позиций в
+           плане под тысячу, и оставлять их там дольше незачем. -->
+      @if (visible().has(group.supplier)) {
+        <div
+          class="grid grid-rows-[1fr] motion-reduce:animate-none"
+          [class]="opened().has(group.supplier) ? 'animate-accordion-in' : 'animate-accordion-out'"
         >
-          <ng-template appTableColumn="name" header="Товар" width="w-60" let-item>
-            <p class="break-words">{{ item.name }}</p>
-            <p class="mt-0.5 text-neutral-400">{{ item.barcode || 'без штрихкода' }}</p>
-          </ng-template>
-
-          <ng-template appTableColumn="stock" header="Остаток" width="w-28" let-item>
-            <p [class]="isOut(item) ? 'text-red-600' : ''">
-              {{ formatAmount(item.stock) }} {{ item.measure }}
-            </p>
-            <p class="mt-0.5 text-neutral-400">{{ formatAmount(item.per_day) }} в день</p>
-          </ng-template>
-
-          <ng-template appTableColumn="cover" header="Хватит на" width="w-32" let-item>
-            <span
-              class="flex items-center gap-2 whitespace-nowrap"
-              [class]="isOut(item) ? 'text-red-600' : 'text-amber-600'"
+          <div class="overflow-hidden">
+            <app-table
+              class="block pb-4"
+              minWidth="min-w-[56rem]"
+              [rows]="group.items"
+              [trackKey]="trackItem"
             >
-              <app-icon [icon]="isOut(item) ? outIcon : lowIcon" />
-              {{ formatCover(item.cover_days) }}
-            </span>
-          </ng-template>
+              <ng-template appTableColumn="name" header="Товар" width="w-60" let-item>
+                <p class="break-words">{{ item.name }}</p>
+                <p class="mt-0.5 text-neutral-400">{{ item.barcode || 'без штрихкода' }}</p>
+              </ng-template>
 
-          <ng-template
-            appTableColumn="suggested"
-            header="Заказать"
-            width="w-28"
-            align="right"
-            let-item
-          >
-            <span class="font-medium">{{ formatAmount(item.suggested) }} {{ item.measure }}</span>
-          </ng-template>
+              <ng-template appTableColumn="stock" header="Остаток" width="w-28" let-item>
+                <p [class]="isOut(item) ? 'text-red-600' : ''">
+                  {{ formatAmount(item.stock) }} {{ item.measure }}
+                </p>
+                <p class="mt-0.5 text-neutral-400">{{ formatAmount(item.per_day) }} в день</p>
+              </ng-template>
 
-          <ng-template appTableColumn="cost" header="На сумму" width="w-32" align="right" let-item>
-            <span class="text-neutral-500">{{ formatMoney(item.cost) }}</span>
-          </ng-template>
-        </app-table>
+              <ng-template appTableColumn="cover" header="Хватит на" width="w-32" let-item>
+                <span
+                  class="flex items-center gap-2 whitespace-nowrap"
+                  [class]="isOut(item) ? 'text-red-600' : 'text-amber-600'"
+                >
+                  <app-icon [icon]="isOut(item) ? outIcon : lowIcon" />
+                  {{ formatCover(item.cover_days) }}
+                </span>
+              </ng-template>
+
+              <ng-template
+                appTableColumn="suggested"
+                header="Заказать"
+                width="w-28"
+                align="right"
+                let-item
+              >
+                <span class="font-medium"
+                  >{{ formatAmount(item.suggested) }} {{ item.measure }}</span
+                >
+              </ng-template>
+
+              <ng-template
+                appTableColumn="cost"
+                header="На сумму"
+                width="w-32"
+                align="right"
+                let-item
+              >
+                <span class="text-neutral-500">{{ formatMoney(item.cost) }}</span>
+              </ng-template>
+            </app-table>
+          </div>
+        </div>
       }
-    </details>
+    </div>
   }
 }

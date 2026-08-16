@@ -24,6 +24,10 @@
   --animate-fade-out: fade-out 150ms ease-in forwards;
   --animate-modal-in: modal-in 150ms ease-out;
   --animate-modal-out: modal-out 150ms ease-in forwards;
+  /* Длительность продублирована в purchases.ts: таблица держится в разметке,
+     пока играет закрытие. */
+  --animate-accordion-in: accordion-in 200ms ease-out;
+  --animate-accordion-out: accordion-out 200ms ease-in forwards;
 }
 
 @keyframes fade-in {
@@ -49,5 +53,21 @@
   to {
     opacity: 0;
     transform: translateY(8px) scale(0.98);
+  }
+}
+
+/* Раскрытие списка: высоту анимировать нечем — она у таблицы своя и заранее
+   неизвестна, поэтому тянем строку сетки от нуля к содержимому. */
+@keyframes accordion-in {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+@keyframes accordion-out {
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
   }
 }
