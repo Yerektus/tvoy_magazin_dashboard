@@ -3,17 +3,21 @@ import { CircleCheck, CircleX, type IconNode, Info } from 'lucide';
 
 import { type ToastKind, Toasts } from '../../services/toasts';
 import { Icon } from '../icon/icon';
+import { Spinner } from '../spinner/spinner';
 
+// У «loading» значка нет — там крутится спиннер, но запись нужна для полноты.
 const ICONS: Record<ToastKind, IconNode> = {
   success: CircleCheck,
   error: CircleX,
   info: Info,
+  loading: Info,
 };
 
 const CLASSES: Record<ToastKind, string> = {
   success: 'text-emerald-600',
   error: 'text-red-600',
   info: 'text-sky-600',
+  loading: 'text-neutral-400',
 };
 
 /** Дальше этого сдвига уведомление считается смахнутым. */
@@ -31,7 +35,7 @@ interface Drag {
 /** Стопка уведомлений в правом нижнем углу. Живёт один раз, в корне приложения. */
 @Component({
   selector: 'app-toasts',
-  imports: [Icon],
+  imports: [Icon, Spinner],
   templateUrl: './toast.html',
 })
 export class ToastStack {

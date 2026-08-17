@@ -81,9 +81,13 @@ export const statusIcon = (status: DocumentStatus): IconNode => STATUS_ICONS[sta
 
 export const statusClasses = (status: DocumentStatus): string => STATUS_CLASSES[status];
 
-/** Штрихкод в строку подставила модель — в бумаге его не было. */
+/**
+ * Штрихкод в строку подставила модель — в бумаге его не было. Уверенность в
+ * единицу бывает только у прочитанного с бумаги, всё меньшее выбрала модель.
+ * Пустой штрихкод при этом невозможен: не уверена — не подставляет вовсе.
+ */
 export const lineGuessed = (line: DocumentLine): boolean =>
-  line.umag_confidence !== null && line.umag_confidence < 1;
+  line.umag_confidence !== null && line.umag_confidence < 1 && Boolean(line.barcode);
 
 export const lineGuessNote = (line: DocumentLine): string =>
   `подставил ИИ · ${Math.round((line.umag_confidence ?? 0) * 100)}%`;

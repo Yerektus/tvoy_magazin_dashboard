@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ArrowRight, BadgeCheck, Plus, Trash2 } from 'lucide';
 
@@ -23,6 +23,7 @@ import {
 import { Confirm } from '../../../../shared/services/confirm';
 import { PageHeader } from '../../../../shared/services/page-header';
 import { Toasts } from '../../../../shared/services/toasts';
+import { Umag } from '../../../extensions/services/umag';
 import { DocumentsStore } from '../../services/documents-store';
 
 /** Вкладки списка и то, чем они оборачиваются в запросе. */
@@ -65,6 +66,7 @@ export class Documents {
   protected readonly dialogOpen = signal(false);
 
   private readonly store = inject(DocumentsStore);
+  private readonly umag = inject(Umag);
   private readonly header = inject(PageHeader);
   private readonly router = inject(Router);
   private readonly toasts = inject(Toasts);
@@ -86,6 +88,9 @@ export class Documents {
 
   protected readonly selected = signal<ReadonlySet<number>>(new Set());
 
+  /** Магазин, с которым список сейчас показан. `undefined` — ещё не известен. */
+  private shownStore: number | null | undefined;
+
   protected readonly allSelected = computed(
     () => this.documents().length > 0 && this.selected().size === this.documents().length,
   );
@@ -99,6 +104,30 @@ export class Documents {
     effect(() => {
       const tab = this.header.activeTab();
       void this.store.load(TABS[tab ?? ''] ?? 'all');
+    });
+
+    // Магазин переключают в шапке, а документы теперь принадлежат ему: список
+    // должен смениться вместе с ним.
+    effect(() => {
+      const store = this.umag.account()?.targetId;
+
+      // Первый известный магазин — тот, с которым список уже загрузился:
+      // бэкенд берёт его из подключения сам, спрашивать второй раз незачем.
+      if (store === undefined || this.shownStore === undefined) {
+        this.shownStore = store;
+        return;
+      }
+
+      if (store === this.shownStore) {
+        return;
+      }
+
+      this.shownStore = store;
+      untracked(() => {
+        // Отмеченные строки остались в другом магазине.
+        this.selected.set(new Set());
+        void this.store.load();
+      });
     });
 
     // Сколько накладных ждёт проверки — числом рядом с вкладкой.

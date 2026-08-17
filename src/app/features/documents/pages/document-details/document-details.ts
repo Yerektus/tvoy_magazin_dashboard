@@ -386,12 +386,21 @@ export class DocumentDetails {
       return;
     }
 
+    // Запрос идёт до секунды, а таблица за это время не меняется: без
+    // уведомления кажется, что кнопка не сработала.
+    const toast = this.toasts.loading('Добавляем позицию…');
+
     try {
       await this.store.addLine(document.id);
       // Бэкенд сдвинул номера остальных строк — забираем накладную целиком.
       this.document.set(await this.store.fetch(document.id));
+      this.toasts.settle(toast, 'Позиция добавлена');
     } catch (error) {
-      this.toasts.error(error instanceof Error ? error.message : 'Не удалось добавить позицию');
+      this.toasts.settle(
+        toast,
+        error instanceof Error ? error.message : 'Не удалось добавить позицию',
+        'error',
+      );
     }
   }
 
@@ -413,12 +422,19 @@ export class DocumentDetails {
       return;
     }
 
+    const toast = this.toasts.loading('Удаляем позицию…');
+
     try {
       await this.store.removeLine(document.id, line.id);
       // Бэкенд перенумеровал строки и пересчитал итог — забираем накладную целиком.
       this.document.set(await this.store.fetch(document.id));
+      this.toasts.settle(toast, 'Позиция удалена');
     } catch (error) {
-      this.toasts.error(error instanceof Error ? error.message : 'Не удалось удалить позицию');
+      this.toasts.settle(
+        toast,
+        error instanceof Error ? error.message : 'Не удалось удалить позицию',
+        'error',
+      );
     }
   }
 

@@ -12,12 +12,16 @@
       [style.transform]="'translateX(' + shift(toast.id) + 'px)'"
       [style.opacity]="opacity(toast.id)"
     >
-      <app-icon
-        class="mt-0.5"
-        [icon]="icon(toast.kind)"
-        [size]="18"
-        [class]="classes(toast.kind)"
-      />
+      @if (toast.kind === 'loading') {
+        <app-spinner class="mt-0.5 text-neutral-400" [size]="18" />
+      } @else {
+        <app-icon
+          class="mt-0.5"
+          [icon]="icon(toast.kind)"
+          [size]="18"
+          [class]="classes(toast.kind)"
+        />
+      }
 
       <p class="min-w-0 flex-1 text-sm">{{ toast.text }}</p>
     </div>
