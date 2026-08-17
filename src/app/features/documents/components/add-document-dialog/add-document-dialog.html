@@ -9,12 +9,12 @@
     <app-icon [icon]="attachIcon" [size]="20" class="text-neutral-400" />
     <span class="text-sm text-neutral-600">Перетащите фото накладных или выберите файлы</span>
     <span class="text-xs text-neutral-400">
-      Можно сразу несколько · JPG, PNG, WEBP или HEIC, до 15 МБ
+      Можно сразу несколько · JPG, PNG или WEBP, до 15 МБ
     </span>
 
     <input
       type="file"
-      accept="image/*,.heic,.heif"
+      accept="image/jpeg,image/png,image/webp"
       multiple
       class="hidden"
       (change)="pick($event)"
