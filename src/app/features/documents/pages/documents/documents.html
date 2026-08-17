@@ -78,17 +78,19 @@
         Открыть
       </button>
 
-      @if (document.status === 'done') {
+      @if (!deleted() && document.status === 'done') {
         <button appMenuItem class="text-emerald-700" (click)="check(document)">
           <app-icon [icon]="checkedIcon" [size]="14" />
           Проверено
         </button>
       }
 
-      <button appMenuItem class="text-red-600" (click)="remove(document)">
-        <app-icon [icon]="removeIcon" [size]="14" />
-        Удалить
-      </button>
+      @if (!deleted()) {
+        <button appMenuItem class="text-red-600" (click)="remove(document)">
+          <app-icon [icon]="removeIcon" [size]="14" />
+          Удалить
+        </button>
+      }
     </app-menu>
   </ng-template>
 </app-table>

@@ -86,6 +86,12 @@ export class Documents {
       : 'Документов пока нет — добавьте первый документ';
   });
 
+  /**
+   * Открыта вкладка «Удалённые». Такую накладную удалять второй раз нечего:
+   * из выдачи она уже ушла, вернуть её может только администратор.
+   */
+  protected readonly deleted = computed(() => TABS[this.header.activeTab() ?? ''] === 'deleted');
+
   protected readonly selected = signal<ReadonlySet<number>>(new Set());
 
   /** Магазин, с которым список сейчас показан. `undefined` — ещё не известен. */
