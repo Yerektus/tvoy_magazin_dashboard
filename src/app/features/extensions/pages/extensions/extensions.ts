@@ -4,6 +4,7 @@ import { Plus } from 'lucide';
 
 import { Button } from '../../../../shared/components/button/button';
 import { Icon } from '../../../../shared/components/icon/icon';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Toasts } from '../../../../shared/services/toasts';
 import { ConnectDialog } from '../../components/connect-dialog/connect-dialog';
 import { type Extension, type ExtensionAccount, type ExtensionSetup } from '../../models/extension';
@@ -13,7 +14,7 @@ import { Catalog } from '../../services/catalog';
 /** Каталог расширений: карточка на каждое, подключить можно прямо из неё. */
 @Component({
   selector: 'app-extensions',
-  imports: [Button, Icon, ConnectDialog],
+  imports: [Button, Icon, Spinner, ConnectDialog],
   templateUrl: './extensions.html',
 })
 export class Extensions {
