@@ -17,85 +17,92 @@
     </a>
   </app-empty>
 } @else {
-  <app-toolbar class="mb-4">
-    @if (groups().length) {
-      <p class="text-sm text-neutral-500">
-        Поставщиков: <span class="text-black">{{ groups().length }}</span>
-      </p>
-    }
-
-    <div toolbarActions class="flex items-center gap-1">
-      <!-- Порядок групп меняется на месте: пересчитывать план для этого не нужно. -->
+  @if (plan()) {
+    <app-toolbar class="mb-4">
       @if (groups().length) {
-        <app-menu [customTrigger]="true" ariaLabel="Порядок поставщиков">
-          <app-button appMenuTrigger variant="ghost" [icon]="true" ariaLabel="Порядок поставщиков">
-            <app-icon [icon]="sortIcon" [size]="18" />
-          </app-button>
-
-          @for (item of sorts; track item.value) {
-            <button appMenuItem (click)="setSort(item.value)">
-              {{ item.label }}
-
-              @if (sort() === item.value) {
-                <app-icon [icon]="chosenIcon" [size]="14" class="ml-auto text-sky-600" />
-              }
-            </button>
-          }
-        </app-menu>
+        <p class="text-sm text-neutral-500">
+          Поставщиков: <span class="text-black">{{ groups().length }}</span>
+        </p>
       }
 
-      <!-- Настройки расчёта и пересчёт живут в одном меню: по отдельности они
-           занимали всю панель, а нужны редко. -->
-      <div class="relative" #filter>
-        <app-button
-          variant="ghost"
-          [icon]="true"
-          ariaLabel="Настройки расчёта"
-          [ariaExpanded]="filterOpen()"
-          (click)="filterOpen.set(!filterOpen())"
-        >
-          <app-icon [icon]="filterIcon" [size]="18" />
-        </app-button>
-
-        @if (filterOpen()) {
-          <div
-            class="animate-fade-in absolute right-0 z-20 mt-1 w-60 rounded-sm border border-neutral-200 bg-white p-3 shadow-lg motion-reduce:animate-none"
-          >
-            <app-select
-              class="w-full mb-2"
-              [options]="periods"
-              [value]="days()"
-              ariaLabel="Период анализа"
-              [disabled]="busy() || building()"
-              (selected)="setDays($event)"
-            />
-
-            <app-select
-              class="mb-2 w-full"
-              [options]="horizons"
-              [value]="horizon()"
-              ariaLabel="Горизонт закупа"
-              [disabled]="busy() || building()"
-              (selected)="setHorizon($event)"
-            />
-
+      <div toolbarActions class="flex items-center gap-1">
+        <!-- Порядок групп меняется на месте: пересчитывать план для этого не нужно. -->
+        @if (groups().length) {
+          <app-menu [customTrigger]="true" ariaLabel="Порядок поставщиков">
             <app-button
-              class="block"
-              variant="primary"
-              [fullWidth]="true"
-              [loading]="busy() || building()"
-              (click)="apply()"
+              appMenuTrigger
+              variant="ghost"
+              [icon]="true"
+              ariaLabel="Порядок поставщиков"
             >
-              <span class="flex items-center justify-center gap-2">
-                <app-icon [icon]="retryIcon" />
-                Применить
-              </span>
+              <app-icon [icon]="sortIcon" [size]="18" />
             </app-button>
-          </div>
+
+            @for (item of sorts; track item.value) {
+              <button appMenuItem (click)="setSort(item.value)">
+                {{ item.label }}
+
+                @if (sort() === item.value) {
+                  <app-icon [icon]="chosenIcon" [size]="14" class="ml-auto text-sky-600" />
+                }
+              </button>
+            }
+          </app-menu>
         }
+
+        <!-- Настройки расчёта и пересчёт живут в одном меню: по отдельности они
+           занимали всю панель, а нужны редко. -->
+        <div class="relative" #filter>
+          <app-button
+            variant="ghost"
+            [icon]="true"
+            ariaLabel="Настройки расчёта"
+            [ariaExpanded]="filterOpen()"
+            (click)="filterOpen.set(!filterOpen())"
+          >
+            <app-icon [icon]="filterIcon" [size]="18" />
+          </app-button>
+
+          @if (filterOpen()) {
+            <div
+              class="animate-fade-in absolute right-0 z-20 mt-1 w-60 rounded-sm border border-neutral-200 bg-white p-3 shadow-lg motion-reduce:animate-none"
+            >
+              <app-select
+                class="w-full mb-2"
+                [options]="periods"
+                [value]="days()"
+                ariaLabel="Период анализа"
+                [disabled]="busy() || building()"
+                (selected)="setDays($event)"
+              />
+
+              <app-select
+                class="mb-2 w-full"
+                [options]="horizons"
+                [value]="horizon()"
+                ariaLabel="Горизонт закупа"
+                [disabled]="busy() || building()"
+                (selected)="setHorizon($event)"
+              />
+
+              <app-button
+                class="block"
+                variant="primary"
+                [fullWidth]="true"
+                [loading]="busy() || building()"
+                (click)="apply()"
+              >
+                <span class="flex items-center justify-center gap-2">
+                  <app-icon [icon]="retryIcon" />
+                  Применить
+                </span>
+              </app-button>
+            </div>
+          }
+        </div>
       </div>
-    </div>
-  </app-toolbar>
+    </app-toolbar>
+  }
 
   @if (plan(); as plan) {
     @switch (plan.status) {
@@ -116,8 +123,7 @@
     <!-- Плана ещё не было: кнопка стоит прямо здесь, а не прячется в
          настройках расчёта — иначе первый шаг искать негде. -->
     <app-empty title="Плана ещё нет">
-      Посчитаем по продажам и остаткам из UMAG: что заканчивается на полке, на сколько дней хватит и
-      сколько дозаказать у каждого поставщика. Это займёт около минуты.
+      Посчитаем по продажам и остаткам из UMAG, что и сколько дозаказать. Займёт около минуты.
 
       <div emptyAction class="mt-4">
         <app-button variant="primary" [loading]="busy()" (click)="rebuild()">
