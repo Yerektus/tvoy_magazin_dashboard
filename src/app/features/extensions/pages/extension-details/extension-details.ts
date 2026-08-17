@@ -13,6 +13,7 @@ import { Check, Info } from 'lucide';
 
 import { Button } from '../../../../shared/components/button/button';
 import { Icon } from '../../../../shared/components/icon/icon';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Confirm } from '../../../../shared/services/confirm';
 import { PageHeader } from '../../../../shared/services/page-header';
 import { Toasts } from '../../../../shared/services/toasts';
@@ -24,7 +25,7 @@ import { Catalog } from '../../services/catalog';
 /** Страница расширения: описание с возможностями и всё про подключение. */
 @Component({
   selector: 'app-extension-details',
-  imports: [Button, Icon, RouterLink, ConnectDialog],
+  imports: [Button, Icon, RouterLink, Spinner, ConnectDialog],
   templateUrl: './extension-details.html',
 })
 export class ExtensionDetails {
