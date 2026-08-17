@@ -118,7 +118,15 @@ export class TargetPicker {
 
   private async load(provider: ExtensionProvider): Promise<void> {
     try {
-      this.targets.set((await provider.targets?.()) ?? []);
+      const found = (await provider.targets?.()) ?? [];
+      this.targets.set(found);
+
+      // Цель не выбрана — берём первую сами. Без неё расширение всё равно не
+      // работает: ни план не посчитать, ни приёмку отправить, — а выбор из
+      // одинаковых на вид магазинов человек всё равно делает наугад.
+      if (!provider.account()?.targetId && found.length) {
+        await this.choose(found[0].id);
+      }
     } catch {
       // Молча: в выборе останется текущая цель.
     }
