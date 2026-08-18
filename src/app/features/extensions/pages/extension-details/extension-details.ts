@@ -9,7 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { Check, Info } from 'lucide';
+import { ArrowLeft, Check, Info, Plug, Unplug } from 'lucide';
 
 import { Button } from '../../../../shared/components/button/button';
 import { Icon } from '../../../../shared/components/icon/icon';
@@ -21,6 +21,14 @@ import { ConnectDialog } from '../../components/connect-dialog/connect-dialog';
 import { type Extension, type ExtensionAccount, type ExtensionLink } from '../../models/extension';
 import { setupFor } from '../../providers';
 import { Catalog } from '../../services/catalog';
+
+/**
+ * Кнопка нижней панели: иконка над подписью, поровну ширины на каждую. Цвет
+ * дописывается отдельно — так же, как в карточке накладной.
+ */
+const BAR_ITEM =
+  'flex flex-1 cursor-pointer flex-col items-center gap-1 px-1 py-2 text-xs transition ' +
+  'disabled:pointer-events-none disabled:opacity-40';
 
 /** Страница расширения: описание с возможностями и всё про подключение. */
 @Component({
@@ -34,6 +42,13 @@ export class ExtensionDetails {
 
   protected readonly checkIcon = Check;
   protected readonly infoIcon = Info;
+  protected readonly backIcon = ArrowLeft;
+  protected readonly connectIcon = Plug;
+  protected readonly disconnectIcon = Unplug;
+
+  protected readonly barItem = `${BAR_ITEM} text-neutral-500 hover:text-neutral-900`;
+  protected readonly barPrimary = `${BAR_ITEM} text-sky-600 hover:text-sky-700`;
+  protected readonly barDanger = `${BAR_ITEM} text-red-600 hover:text-red-700`;
 
   protected readonly extension = signal<Extension | null>(null);
   protected readonly loading = signal(true);
@@ -99,6 +114,11 @@ export class ExtensionDetails {
    * Расширению со своим входом нужно окно с логином и паролем, надстройка
    * над уже подключённым сервисом включается прямо отсюда.
    */
+  /** Из нижней панели — обратно в каталог: крошки на телефоне узкие. */
+  protected back(): void {
+    void this.router.navigateByUrl('/settings');
+  }
+
   protected async connect(): Promise<void> {
     const extension = this.extension();
 

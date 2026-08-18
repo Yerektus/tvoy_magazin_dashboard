@@ -29,7 +29,8 @@
       </div>
     </div>
 
-    <div class="shrink-0">
+    <!-- На телефоне подключение переехало в нижнюю панель, она в конце. -->
+    <div class="hidden shrink-0 lg:block">
       @if (setup()) {
         @if (linked()) {
           <app-button (click)="disconnect()">
@@ -100,6 +101,44 @@
       </div>
     </div>
   }
+
+  <!-- Место под нижнюю панель: иначе она закрывает последний абзац описания. -->
+  <div class="h-20 lg:hidden"></div>
+
+  <!-- Нижний отступ учитывает полосу жестов на айфоне. -->
+  <div
+    class="fixed inset-x-0 bottom-0 z-20 flex items-stretch border-t border-neutral-200 bg-white pb-[max(0.25rem,env(safe-area-inset-bottom))] lg:hidden"
+  >
+    <button type="button" [class]="barItem" (click)="back()">
+      <app-icon [icon]="backIcon" [size]="20" />
+      Расширения
+    </button>
+
+    @if (!setup()) {
+      <button type="button" [class]="barItem" disabled>
+        <app-icon [icon]="connectIcon" [size]="20" />
+        Скоро
+      </button>
+    } @else if (linked()) {
+      <button type="button" [class]="barDanger" [disabled]="busy()" (click)="disconnect()">
+        @if (busy()) {
+          <app-spinner [size]="20" />
+        } @else {
+          <app-icon [icon]="disconnectIcon" [size]="20" />
+        }
+        Отключить
+      </button>
+    } @else {
+      <button type="button" [class]="barPrimary" [disabled]="busy()" (click)="connect()">
+        @if (busy()) {
+          <app-spinner [size]="20" />
+        } @else {
+          <app-icon [icon]="connectIcon" [size]="20" />
+        }
+        Подключить
+      </button>
+    }
+  </div>
 
   @if (setup(); as setup) {
     <app-connect-dialog
