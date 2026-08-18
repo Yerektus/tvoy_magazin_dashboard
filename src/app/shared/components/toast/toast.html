@@ -1,4 +1,9 @@
-<div class="pointer-events-none fixed right-4 bottom-4 z-50 flex flex-col gap-2">
+<!-- На телефоне карточки поднимаются над нижней панелью: она есть в
+     карточках накладной и расширения, а высота у неё около 3.5rem плюс
+     полоса жестов. На широком экране панели нет — уведомления опускаются. -->
+<div
+  class="pointer-events-none fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 flex flex-col gap-2 lg:bottom-4"
+>
   @for (toast of toasts.toasts(); track toast.id) {
     <div
       role="status"
