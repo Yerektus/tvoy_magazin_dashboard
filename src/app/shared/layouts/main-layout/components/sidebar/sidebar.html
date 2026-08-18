@@ -10,6 +10,7 @@
           [routerLink]="item.route"
           routerLinkActive="bg-neutral-200 font-medium text-neutral-900"
           class="rounded-sm px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-neutral-200 hover:text-neutral-900"
+          (click)="navigated.emit()"
         >
           {{ item.label }}
         </a>
