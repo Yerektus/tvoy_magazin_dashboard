@@ -306,13 +306,26 @@
           <dl class="mt-1">
             <div [class]="row">
               <dt [class]="rowLabel">Название</dt>
-              <dd class="min-w-0 break-words">{{ document.supplier || 'не распознан' }}</dd>
+              <!-- grow обязателен: поле ввода объявлено size="1", и без растяжки
+                   строка сжала бы его до одного символа. -->
+              <dd class="min-w-0 grow break-words">
+                <app-editable-text
+                  [value]="document.supplier"
+                  placeholder="не распознан"
+                  (changed)="saveSupplier({ supplier: $event })"
+                />
+              </dd>
             </div>
 
             <div [class]="row">
               <dt [class]="rowLabel">БИН</dt>
-              <dd class="flex min-w-0 flex-wrap items-center gap-2">
-                {{ document.supplier_bin || '—' }}
+              <dd class="flex min-w-0 grow flex-wrap items-center gap-2">
+                <!-- Ширины хватает на 12 цифр БИН: дальше встаёт плашка. -->
+                <app-editable-text
+                  class="w-44 shrink-0"
+                  [value]="document.supplier_bin"
+                  (changed)="saveSupplier({ supplier_bin: $event })"
+                />
 
                 @if (document.supplier_bin_auto) {
                   <span

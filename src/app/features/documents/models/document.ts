@@ -43,9 +43,9 @@ export interface DocumentItem {
   processed_at: string | null;
   checked_at: string | null;
   checked_by_email: string | null;
-  /** Приходит только в карточке документа. */
+  /** Снимок как его сделали, сжатый. Приходит только в карточке документа. */
   image?: string;
-  /** JPEG для показа: заполнен, когда оригинал в HEIC. */
+  /** Он же выпрямленный — его и показываем. Пусто, если лист найти не удалось. */
   preview?: string;
   model?: string;
   lines?: DocumentLine[];

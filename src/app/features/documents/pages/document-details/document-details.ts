@@ -336,6 +336,21 @@ export class DocumentDetails {
     });
   }
 
+  /** Сохраняет поставщика: его название и БИН стоят на печати, а не в таблице. */
+  protected async saveSupplier(patch: Partial<DocumentItem>): Promise<void> {
+    const document = this.document();
+    if (!document) {
+      return;
+    }
+
+    try {
+      const saved = await this.store.updateDocument(document.id, patch);
+      this.document.set(saved);
+    } catch (error) {
+      this.toasts.error(error instanceof Error ? error.message : 'Не удалось сохранить');
+    }
+  }
+
   /**
    * Сохраняет правку позиции. Числовые поля пропускаем через проверку:
    * бэкенд отвергнет мусор, но лучше сказать об этом сразу.

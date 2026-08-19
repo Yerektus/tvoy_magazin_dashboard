@@ -158,6 +158,24 @@ export class DocumentsStore {
     return checked;
   }
 
+  /**
+   * Правка поставщика. Название и БИН стоят на печати, а не в таблице, и
+   * читаются с фото хуже всего — их чаще прочего приходится вписывать руками.
+   */
+  async updateDocument(id: number, patch: Partial<DocumentItem>): Promise<DocumentItem> {
+    try {
+      const saved = await firstValueFrom(
+        this.http.patch<DocumentItem>(`${this.url}${id}/`, patch),
+      );
+      // Список открыт за карточкой — там та же накладная, и она должна сойтись.
+      this.merge(saved);
+
+      return saved;
+    } catch (error) {
+      throw new Error(describe(error));
+    }
+  }
+
   /** Правка распознанной позиции: модель ошибается, бумага — источник истины. */
   async updateLine(
     invoiceId: number,
