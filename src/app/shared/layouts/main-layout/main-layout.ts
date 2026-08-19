@@ -69,7 +69,9 @@ export class MainLayout {
   }
 
   protected logout(): void {
-    this.auth.logout();
+    // Токены стёрты сразу, а гашение refresh на сервере ждать незачем:
+    // уводим на вход, не дожидаясь ответа.
+    void this.auth.logout();
     this.router.navigateByUrl('/login');
   }
 
