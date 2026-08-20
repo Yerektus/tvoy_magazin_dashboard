@@ -4,10 +4,20 @@ import { firstValueFrom } from 'rxjs';
 
 import { API_BASE_URL } from '../../../shared/services/api-config';
 
+export interface Organization {
+  id: number;
+  name: string;
+}
+
 export interface AuthUser {
   id: number;
   email: string;
   name: string;
+  role: 'owner' | 'admin' | 'manager';
+  /** Заходят в организацию: без неё сервер на вход и не пустит. */
+  organization: Organization;
+  /** Владелец и администратор ведут организацию, менеджер — только работает. */
+  manages_organization: boolean;
 }
 
 interface LoginResponse {
@@ -44,6 +54,8 @@ export class Auth {
 
   readonly user = this.currentUser.asReadonly();
   readonly isAuthenticated = computed(() => this.accessToken() !== null);
+  /** Показывать ли то, чем ведут организацию: расширения и дальше настройки. */
+  readonly managesOrganization = computed(() => this.currentUser()?.manages_organization === true);
 
   token(): string | null {
     return this.accessToken();
@@ -67,6 +79,26 @@ export class Auth {
     this.keep(response.access, response.refresh);
     this.currentUser.set(response.user);
     localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+  }
+
+  /**
+   * Перечитывает, кто мы, с сервера. Нужно при запуске: в localStorage лежит
+   * тот пользователь, каким его записали при входе, а роль и организация с тех
+   * пор могли смениться — да и у сессий, открытых до появления ролей, их там
+   * попросту нет, и человек остался бы без страниц, которые ему положены.
+   */
+  async reload(): Promise<void> {
+    if (!this.accessToken()) {
+      return;
+    }
+
+    try {
+      const user = await firstValueFrom(this.http.get<AuthUser>(`${API_BASE_URL}/auth/me/`));
+      this.currentUser.set(user);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    } catch {
+      // Токен протух — этим займётся перехватчик, здесь молчим.
+    }
   }
 
   /**

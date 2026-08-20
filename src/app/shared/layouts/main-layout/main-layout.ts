@@ -20,15 +20,18 @@ export class MainLayout {
   private readonly router = inject(Router);
 
   private readonly planning = inject(Planning);
+  private readonly auth = inject(Auth);
 
-  /** Страницы от расширений появляются, только когда те подключены. */
+  /**
+   * Страницы от расширений появляются, только когда те подключены, а сам
+   * каталог расширений — только у владельца и администратора: менеджер с
+   * накладными работает, но организацией не заведует.
+   */
   protected readonly nav = computed<readonly SidebarItem[]>(() => [
     { label: 'Документы', route: '/documents' },
     ...(this.planning.connected() ? [{ label: 'Планирование закупов', route: '/purchases' }] : []),
-    { label: 'Расширение', route: '/settings' },
+    ...(this.auth.managesOrganization() ? [{ label: 'Расширение', route: '/settings' }] : []),
   ]);
-
-  private readonly auth = inject(Auth);
 
   protected readonly user = computed(() => this.auth.user()?.email ?? '');
 
@@ -36,6 +39,9 @@ export class MainLayout {
     // Состояние расширений спрашиваем один раз на загрузку: от него зависит,
     // какие страницы вообще есть в меню.
     void this.planning.load().catch(() => undefined);
+    // И кто мы — тоже: роль в сохранённом профиле могла устареть, а от неё
+    // зависит, показывать ли расширения.
+    void this.auth.reload();
   }
 
   // На телефоне сайдбар закрыт: он перекрывает страницу целиком.

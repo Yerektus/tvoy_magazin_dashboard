@@ -1,6 +1,10 @@
 import { Routes } from '@angular/router';
 
-import { authGuard, guestGuard } from './features/auth/guards/auth-guard';
+import {
+  authGuard,
+  guestGuard,
+  managesOrganizationGuard,
+} from './features/auth/guards/auth-guard';
 
 export const routes: Routes = [
   {
@@ -39,12 +43,14 @@ export const routes: Routes = [
       {
         path: 'settings',
         title: 'Расширение',
+        canActivate: [managesOrganizationGuard],
         loadComponent: () =>
           import('./features/extensions/pages/extensions/extensions').then((m) => m.Extensions),
       },
       {
         path: 'settings/:slug',
         title: 'Расширение',
+        canActivate: [managesOrganizationGuard],
         loadComponent: () =>
           import('./features/extensions/pages/extension-details/extension-details').then(
             (m) => m.ExtensionDetails,
