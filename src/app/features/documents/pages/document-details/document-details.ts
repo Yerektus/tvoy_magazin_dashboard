@@ -53,6 +53,7 @@ import {
   isGuessed,
   lineNote,
   suggestionNote,
+  storeIndexOf,
   supplyUrl,
 } from '../../../extensions/models/umag';
 import { Umag } from '../../../extensions/services/umag';
@@ -183,18 +184,30 @@ export class DocumentDetails {
   protected readonly canCheck = computed(() => this.document()?.status === 'done');
 
   /**
-   * В UMAG уходит только проверенная накладная и только один раз.
-   * Пока расширение не подключено, кнопки нет: отправлять некуда.
+   * Порядок такой: сначала «Проверено», и только у проверенной накладной
+   * появляется отправка — две кнопки разом сбивают с толку, непонятно, какую
+   * жать первой. Уехавшую второй раз не отправляем, а пока расширение не
+   * подключено, кнопки нет вовсе: отправлять некуда.
    */
   protected readonly canSendToUmag = computed(() => {
     const document = this.document();
+
     return this.umag.connected() && document?.status === 'checked' && !document.umag_supply_id;
   });
 
-  /** Ссылка на созданный черновик приёмки. */
+  /** Ссылка на созданный черновик приёмки — в тот магазин, куда она уехала. */
   protected readonly umagLink = computed(() => {
-    const supplyId = this.document()?.umag_supply_id;
-    return supplyId ? supplyUrl(supplyId) : null;
+    const document = this.document();
+    const account = this.umag.account();
+
+    if (!document?.umag_supply_id) {
+      return null;
+    }
+
+    // Накладная помнит свой магазин; у старых его нет — берём выбранный сейчас.
+    const store = document.umag_store_id ?? account?.targetId ?? null;
+
+    return supplyUrl(document.umag_supply_id, storeIndexOf(account?.targets, store));
   });
 
   /** История обработки: что уже сделал бэкенд и что делает прямо сейчас. */

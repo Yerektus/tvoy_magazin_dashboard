@@ -1,3 +1,5 @@
+import type { ExtensionTarget } from './extension';
+
 /** Подключение сотрудника к своему кабинету UMAG. */
 export interface UmagAccount {
   connected: boolean;
@@ -66,7 +68,6 @@ export interface UmagPreflight {
 
 export interface UmagDraft {
   supply_id: number;
-  url: string;
 }
 
 const LINE_NOTES: Record<UmagLineStatus, string> = {
@@ -98,5 +99,24 @@ export const isGuessed = (line: UmagLine): boolean =>
 export const guessNote = (line: UmagLine): string =>
   `Штрихкод подставил ИИ · ${percent(line.confidence)}`;
 
-/** Ссылка на черновик приёмки в кабинете. */
-export const supplyUrl = (id: number): string => `https://web.umag.kz/store/0/supplies/${id}/edit`;
+/**
+ * Ссылка на черновик приёмки в кабинете.
+ *
+ * Две ловушки, обе стоили нам «У Вас нет доступа к этой приёмке».
+ *
+ * Первая: в адресе стоит не номер магазина, а его **порядковый номер** в
+ * списке магазинов кабинета. Маршрут объявлен как `store/:storeId`, но кладут
+ * туда `storeIndex`, и у третьего магазина это `2`, а не `17797`.
+ *
+ * Вторая: страница называется `edit-template`, а не `edit`.
+ */
+export const supplyUrl = (id: number, storeIndex: number): string =>
+  `https://web.umag.kz/store/${storeIndex}/supplies/${id}/edit-template`;
+
+/** Порядковый номер магазина в кабинете — его и ждёт адрес приёмки. */
+export const storeIndexOf = (targets: ExtensionTarget[] | undefined, storeId: number | null) => {
+  const index = (targets ?? []).findIndex((target) => target.id === storeId);
+
+  // Не нашли — пусть откроется первый магазин: пустая страница хуже.
+  return index >= 0 ? index : 0;
+};

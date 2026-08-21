@@ -122,61 +122,6 @@
           }
         </ul>
 
-        @if (umagState(); as umag) {
-          <div class="mt-6 rounded-sm border border-neutral-200 p-4">
-            <div class="flex items-center justify-between gap-3">
-              <p class="text-sm font-medium">Готовность к UMAG</p>
-              <p class="text-sm text-neutral-500">
-                Поставщик: {{ umag.supplier.agent_name || 'не выбран' }}
-              </p>
-            </div>
-
-            @if (umag.problems.length) {
-              <ul class="mt-2 text-sm text-amber-700">
-                @for (problem of umag.problems; track problem) {
-                  <li>{{ problem }}</li>
-                }
-              </ul>
-            } @else {
-              <p class="mt-2 text-sm text-emerald-600">Всё сходится — можно отправлять</p>
-            }
-
-            <ul class="mt-3">
-              @for (line of umag.lines; track line.id) {
-                <li
-                  class="flex items-center justify-between gap-3 border-b border-neutral-100 py-2 text-sm last:border-0"
-                >
-                  <span class="min-w-0 truncate">{{ line.position }}. {{ line.name }}</span>
-
-                  <span class="flex shrink-0 items-center gap-3">
-                    @if (isGuessed(line)) {
-                      <span
-                        class="rounded-sm bg-sky-50 px-1.5 py-0.5 text-xs whitespace-nowrap text-sky-700"
-                      >
-                        {{ guessNote(line) }}
-                      </span>
-                    }
-
-                    <span [class]="line.status === 'ok' ? 'text-neutral-500' : 'text-amber-600'">
-                      {{ lineNote(line) }}
-                    </span>
-
-                    @if (line.suggested_barcode) {
-                      <span class="text-xs whitespace-nowrap text-neutral-400">
-                        {{ suggestionNote(line) }}
-                      </span>
-
-                      <app-button variant="ghost" (click)="applySuggestion(line)">
-                        Это «{{ line.suggested_name }}»
-                      </app-button>
-                    }
-                  </span>
-                </li>
-              }
-            </ul>
-          </div>
-        }
-
         <div class="w-full flex justify-end mt-8">
           <app-button (click)="addLine()">
             <span class="flex items-center gap-2">
