@@ -26,9 +26,12 @@ export interface UmagUser {
 
 /**
  * Что не так со строкой перед отправкой.
- * `ok` — товар в UMAG нашёлся, остальное чинит человек.
+ *
+ * `ok` — товар в UMAG нашёлся. `new_product` — штрихкод с бумаги настоящий, но
+ * такого товара в кабинете нет: карточку заведём при отправке, чинить нечего.
+ * Остальное чинит человек.
  */
-export type UmagLineStatus = 'ok' | 'no_barcode' | 'unknown_barcode' | 'no_price';
+export type UmagLineStatus = 'ok' | 'no_barcode' | 'new_product' | 'no_price';
 
 export interface UmagLine {
   id: number;
@@ -73,7 +76,7 @@ export interface UmagDraft {
 const LINE_NOTES: Record<UmagLineStatus, string> = {
   ok: 'Товар найден',
   no_barcode: 'Нет штрихкода',
-  unknown_barcode: 'Штрихкода нет в UMAG',
+  new_product: 'Нового товара нет в UMAG — заведём при отправке',
   no_price: 'Нет количества или цены',
 };
 
