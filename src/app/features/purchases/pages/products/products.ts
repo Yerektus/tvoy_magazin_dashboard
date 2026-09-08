@@ -1,6 +1,6 @@
 import { Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { RefreshCw } from 'lucide';
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RefreshCw } from 'lucide';
 
 import { Button } from '../../../../shared/components/button/button';
 import { Empty } from '../../../../shared/components/empty/empty';
@@ -22,6 +22,11 @@ import { Planning } from '../../services/planning';
 
 /** Пока чеки грузятся, список спрашиваем так же часто, как считающийся план. */
 const POLL_INTERVAL = 2500;
+/** Сколько строк на одной странице таблицы. */
+const PAGE_SIZE = 50;
+
+type SortColumn = 'name' | 'sold' | 'last';
+type SortDirection = 'asc' | 'desc';
 
 /**
  * Товары магазина из продаж UMAG. Синхронизация живёт здесь, а планировка
@@ -34,15 +39,21 @@ const POLL_INTERVAL = 2500;
 })
 export class Products {
   protected readonly syncIcon = RefreshCw;
+  protected readonly prevIcon = ChevronLeft;
+  protected readonly nextIcon = ChevronRight;
+  protected readonly sortUpIcon = ArrowUp;
+  protected readonly sortDownIcon = ArrowDown;
   protected readonly formatAmount = formatAmount;
   protected readonly formatDate = formatDate;
   protected readonly formatTime = formatTime;
 
   protected readonly products = signal<StoreProduct[]>([]);
   protected readonly status = signal<SalesSyncStatus>('idle');
-  protected readonly syncedAt = signal<string | null>(null);
   protected readonly error = signal('');
   protected readonly query = signal('');
+  protected readonly page = signal(1);
+  protected readonly sortColumn = signal<SortColumn>('sold');
+  protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly loading = signal(true);
 
   protected readonly trackProduct = (product: StoreProduct) => product.barcode;
@@ -54,18 +65,40 @@ export class Products {
   protected readonly connected = this.planning.connected;
   protected readonly syncing = computed(() => this.status() === 'syncing');
   protected readonly failed = computed(() => this.status() === 'failed');
-  protected readonly visible = computed(() => {
+  /** Отбор по поиску, затем сортировка — пагинация режет уже это. */
+  protected readonly matched = computed(() => {
     const query = this.query().trim().toLowerCase();
-    const items = this.products();
+    const items = query
+      ? this.products().filter(
+          (item) =>
+            item.name.toLowerCase().includes(query) || item.barcode.toLowerCase().includes(query),
+        )
+      : this.products();
 
-    if (!query) {
-      return items;
+    return sortProducts(items, this.sortColumn(), this.sortDirection());
+  });
+  protected readonly pageCount = computed(() =>
+    Math.max(1, Math.ceil(this.matched().length / PAGE_SIZE)),
+  );
+  /** Номер, который реально показываем: не уезжаем за конец списка. */
+  protected readonly shownPage = computed(() => Math.min(this.page(), this.pageCount()));
+  protected readonly rangeLabel = computed(() => {
+    const total = this.matched().length.toLocaleString('ru-RU');
+    return `${this.rangeStart()}–${this.rangeEnd()} из ${total}`;
+  });
+  protected readonly rangeStart = computed(() => {
+    if (!this.matched().length) {
+      return 0;
     }
 
-    return items.filter(
-      (item) =>
-        item.name.toLowerCase().includes(query) || item.barcode.toLowerCase().includes(query),
-    );
+    return (this.shownPage() - 1) * PAGE_SIZE + 1;
+  });
+  protected readonly rangeEnd = computed(() =>
+    Math.min(this.shownPage() * PAGE_SIZE, this.matched().length),
+  );
+  protected readonly visible = computed(() => {
+    const start = (this.shownPage() - 1) * PAGE_SIZE;
+    return this.matched().slice(start, start + PAGE_SIZE);
   });
 
   /**
@@ -91,6 +124,41 @@ export class Products {
 
   protected search(event: Event): void {
     this.query.set((event.target as HTMLInputElement).value);
+    this.page.set(1);
+  }
+
+  protected toggleSort(column: SortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDirection.update((direction) => (direction === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortColumn.set(column);
+      this.sortDirection.set(column === 'name' ? 'asc' : 'desc');
+    }
+
+    this.page.set(1);
+  }
+
+  protected isSorted(column: SortColumn): boolean {
+    return this.sortColumn() === column;
+  }
+
+  protected sortIcon(column: SortColumn) {
+    if (!this.isSorted(column)) {
+      return null;
+    }
+
+    return this.sortDirection() === 'asc' ? this.sortUpIcon : this.sortDownIcon;
+  }
+
+  protected goTo(page: number): void {
+    const next = Math.min(Math.max(1, page), this.pageCount());
+
+    if (next === this.shownPage()) {
+      return;
+    }
+
+    this.page.set(next);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   protected async sync(): Promise<void> {
@@ -134,6 +202,9 @@ export class Products {
     this.loading.set(true);
     this.apply(emptyProducts());
     this.query.set('');
+    this.page.set(1);
+    this.sortColumn.set('sold');
+    this.sortDirection.set('desc');
 
     try {
       if (this.planning.account() === null) {
@@ -197,7 +268,28 @@ export class Products {
   private apply(snapshot: ProductsSnapshot): void {
     this.products.set(snapshot.items);
     this.status.set(snapshot.status);
-    this.syncedAt.set(snapshot.synced_at);
     this.error.set(snapshot.error);
   }
+}
+
+function sortProducts(
+  items: readonly StoreProduct[],
+  column: SortColumn,
+  direction: SortDirection,
+): StoreProduct[] {
+  const factor = direction === 'asc' ? 1 : -1;
+
+  return [...items].sort((left, right) => {
+    switch (column) {
+      case 'name':
+        return factor * left.name.localeCompare(right.name, 'ru');
+      case 'sold':
+        return factor * (Number(left.sold) - Number(right.sold));
+      case 'last': {
+        const leftDate = left.last_sold ?? '';
+        const rightDate = right.last_sold ?? '';
+        return factor * leftDate.localeCompare(rightDate);
+      }
+    }
+  });
 }

@@ -38,14 +38,29 @@
   </app-empty>
 } @else {
   <app-toolbar class="mb-4">
-    <p class="text-sm text-neutral-500">
-      Товаров: <span class="text-black">{{ products().length }}</span>
-      @if (syncing()) {
-        <span class="ml-2">· загружаем продажи</span>
-      } @else if (syncedAt(); as at) {
-        <span class="ml-2">· обновлено {{ formatDate(at) }} {{ formatTime(at) }}</span>
-      }
-    </p>
+    <nav class="flex items-center gap-1" aria-label="Страницы">
+      <p class="text-sm text-neutral-500">{{ rangeLabel() }}</p>
+
+      <app-button
+        variant="ghost"
+        [icon]="true"
+        [disabled]="shownPage() <= 1"
+        ariaLabel="Предыдущая страница"
+        (click)="goTo(shownPage() - 1)"
+      >
+        <app-icon [icon]="prevIcon" />
+      </app-button>
+
+      <app-button
+        variant="ghost"
+        [icon]="true"
+        [disabled]="shownPage() >= pageCount()"
+        ariaLabel="Следующая страница"
+        (click)="goTo(shownPage() + 1)"
+      >
+        <app-icon [icon]="nextIcon" />
+      </app-button>
+    </nav>
 
     <div toolbarActions class="flex items-center gap-2">
       <input
@@ -72,24 +87,81 @@
   }
 
   <app-table
-    class="mt-4 block"
+    class="block"
     minWidth="min-w-[40rem]"
     [rows]="visible()"
     [trackKey]="trackProduct"
     [empty]="query() ? 'Ничего не нашлось' : 'Товаров пока нет'"
   >
-    <ng-template appTableColumn="name" header="Товар" width="w-80" let-product>
+    <ng-template #nameHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('name')"
+        [attr.aria-sort]="
+          isSorted('name') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('name')"
+      >
+        Товар
+        @if (sortIcon('name'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #soldHeader>
+      <button
+        type="button"
+        class="ml-auto flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('sold')"
+        [attr.aria-sort]="
+          isSorted('sold') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('sold')"
+      >
+        Продано
+        @if (sortIcon('sold'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #lastHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('last')"
+        [attr.aria-sort]="
+          isSorted('last') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('last')"
+      >
+        Последняя продажа
+        @if (sortIcon('last'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template appTableColumn="name" [headerTemplate]="nameHeader" width="w-80" let-product>
       <p class="break-words">{{ product.name }}</p>
       <p class="mt-0.5 text-neutral-400">{{ product.barcode || 'без штрихкода' }}</p>
     </ng-template>
 
-    <ng-template appTableColumn="sold" header="Продано" width="w-32" align="right" let-product>
+    <ng-template
+      appTableColumn="sold"
+      [headerTemplate]="soldHeader"
+      width="w-36"
+      align="right"
+      let-product
+    >
       <span
         >{{ formatAmount(product.sold) }}{{ product.measure ? ' ' + product.measure : '' }}</span
       >
     </ng-template>
 
-    <ng-template appTableColumn="last" header="Последняя продажа" width="w-40" let-product>
+    <ng-template appTableColumn="last" [headerTemplate]="lastHeader" width="w-40" let-product>
       <p class="whitespace-nowrap text-neutral-500">{{ formatDate(product.last_sold) }}</p>
       <p class="mt-0.5 whitespace-nowrap text-neutral-400">{{ formatTime(product.last_sold) }}</p>
     </ng-template>
