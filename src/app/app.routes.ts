@@ -43,10 +43,22 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'products',
+        title: 'Товары',
+        loadComponent: () =>
+          import('./features/purchases/pages/products/products').then((m) => m.Products),
+      },
+      {
         path: 'purchases',
         title: 'Планирование закупов',
         loadComponent: () =>
           import('./features/purchases/pages/purchases/purchases').then((m) => m.Purchases),
+      },
+      {
+        path: 'purchases/:id',
+        title: 'Планировка',
+        loadComponent: () =>
+          import('./features/purchases/pages/plan-details/plan-details').then((m) => m.PlanDetails),
       },
       {
         path: 'settings',

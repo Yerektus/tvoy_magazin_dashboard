@@ -1,0 +1,97 @@
+@if (loading()) {
+  <div class="flex min-h-[70vh] items-center justify-center text-neutral-400">
+    <app-spinner [size]="24" />
+  </div>
+} @else if (!connected()) {
+  <app-empty title="Расширение не подключено">
+    Товары берутся из продаж UMAG. Подключите планирование закупов на странице расширения.
+
+    <a
+      emptyAction
+      routerLink="/settings/planning"
+      class="mt-4 inline-block text-sm text-sky-600 hover:text-sky-700"
+    >
+      Открыть расширение →
+    </a>
+  </app-empty>
+} @else if (syncing() && !products().length) {
+  <div class="flex min-h-[70vh] flex-col items-center justify-center text-neutral-400">
+    <app-spinner [size]="24" />
+    <p class="mt-4 text-center text-sm text-neutral-500">Загружаем продажи из UMAG</p>
+  </div>
+} @else if (!products().length) {
+  <app-empty [title]="failed() ? 'Не удалось загрузить продажи' : 'Товаров пока нет'">
+    {{
+      failed()
+        ? error() || 'Попробуйте синхронизировать ещё раз.'
+        : 'Синхронизируйте продажи из UMAG — по ним будет считаться закуп.'
+    }}
+
+    <div emptyAction class="mt-4">
+      <app-button variant="primary" [loading]="syncing()" (click)="sync()">
+        <span class="flex items-center justify-center gap-2">
+          <app-icon [icon]="syncIcon" />
+          Синхронизировать
+        </span>
+      </app-button>
+    </div>
+  </app-empty>
+} @else {
+  <app-toolbar class="mb-4">
+    <p class="text-sm text-neutral-500">
+      Товаров: <span class="text-black">{{ products().length }}</span>
+      @if (syncing()) {
+        <span class="ml-2">· загружаем продажи</span>
+      } @else if (syncedAt(); as at) {
+        <span class="ml-2">· обновлено {{ formatDate(at) }} {{ formatTime(at) }}</span>
+      }
+    </p>
+
+    <div toolbarActions class="flex items-center gap-2">
+      <input
+        type="search"
+        class="w-56 rounded-sm border border-neutral-200 px-3 py-1.5 text-sm outline-none placeholder:text-neutral-400 hover:border-sky-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20"
+        placeholder="Название или штрихкод"
+        [value]="query()"
+        (input)="search($event)"
+      />
+
+      <app-button variant="primary" [loading]="syncing()" (click)="sync()">
+        <span class="flex items-center gap-2">
+          <app-icon [icon]="syncIcon" />
+          Обновить
+        </span>
+      </app-button>
+    </div>
+  </app-toolbar>
+
+  @if (failed() && error()) {
+    <p class="mb-4 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {{ error() }}
+    </p>
+  }
+
+  <app-table
+    class="mt-4 block"
+    minWidth="min-w-[40rem]"
+    [rows]="visible()"
+    [trackKey]="trackProduct"
+    [empty]="query() ? 'Ничего не нашлось' : 'Товаров пока нет'"
+  >
+    <ng-template appTableColumn="name" header="Товар" width="w-80" let-product>
+      <p class="break-words">{{ product.name }}</p>
+      <p class="mt-0.5 text-neutral-400">{{ product.barcode || 'без штрихкода' }}</p>
+    </ng-template>
+
+    <ng-template appTableColumn="sold" header="Продано" width="w-32" align="right" let-product>
+      <span
+        >{{ formatAmount(product.sold) }}{{ product.measure ? ' ' + product.measure : '' }}</span
+      >
+    </ng-template>
+
+    <ng-template appTableColumn="last" header="Последняя продажа" width="w-40" let-product>
+      <p class="whitespace-nowrap text-neutral-500">{{ formatDate(product.last_sold) }}</p>
+      <p class="mt-0.5 whitespace-nowrap text-neutral-400">{{ formatTime(product.last_sold) }}</p>
+    </ng-template>
+  </app-table>
+}

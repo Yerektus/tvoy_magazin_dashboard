@@ -1,3 +1,5 @@
+import { CircleCheck, type IconNode, RefreshCw, TriangleAlert } from 'lucide';
+
 export type PlanStatus = 'building' | 'ready' | 'failed';
 
 /** Строка плана: один товар, который пора дозаказать. */
@@ -21,6 +23,8 @@ export interface PurchasePlanItem {
 
 export interface PurchasePlan {
   id: number;
+  /** Как назвали в кабинете. Пусто — с телефона или старая запись. */
+  name: string;
   status: PlanStatus;
   error: string;
   store_id: number | null;
@@ -28,12 +32,89 @@ export interface PurchasePlan {
   /** Период анализа и горизонт закупа, в днях. */
   days: number;
   horizon: number;
+  /** Вычитать ли остаток на складе из потребности. */
+  use_stock: boolean;
   /** Сколько всего позиций просит заказа: в `items` лежат самые срочные. */
   items_total: number;
   total_cost: string;
   created_at: string;
   built_at: string | null;
-  items: PurchasePlanItem[];
+  /** В списке позиций нет: их тысячи, таблице они не нужны. */
+  items?: PurchasePlanItem[];
+}
+
+const STATUS_LABELS: Record<PlanStatus, string> = {
+  building: 'Считается',
+  ready: 'Готов',
+  failed: 'Ошибка',
+};
+
+const STATUS_ICONS: Record<PlanStatus, IconNode> = {
+  building: RefreshCw,
+  ready: CircleCheck,
+  failed: TriangleAlert,
+};
+
+const STATUS_CLASSES: Record<PlanStatus, string> = {
+  building: 'text-sky-600',
+  ready: 'text-emerald-600',
+  failed: 'text-red-600',
+};
+
+export const statusLabel = (status: PlanStatus): string => STATUS_LABELS[status];
+
+export const statusIcon = (status: PlanStatus): IconNode => STATUS_ICONS[status];
+
+export const statusClasses = (status: PlanStatus): string => STATUS_CLASSES[status];
+
+/** Заголовок планировки: своё имя или горизонт, если имя не задали. */
+export function planTitle(plan: Pick<PurchasePlan, 'name' | 'horizon'>): string {
+  const name = plan.name.trim();
+
+  return name || `Закуп на ${plan.horizon} дн.`;
+}
+
+/** На сколько дней закупаемся — как в модалке и в таблице. */
+export function horizonLabel(days: number): string {
+  if (days === 3) {
+    return 'Закуп на 3 дня';
+  }
+
+  if (days === 7) {
+    return 'Закуп на неделю';
+  }
+
+  if (days === 14) {
+    return 'Закуп на 2 недели';
+  }
+
+  if (days === 30) {
+    return 'Закуп на месяц';
+  }
+
+  return `Закуп на ${days} дн.`;
+}
+
+export function formatDate(value: string | null): string {
+  if (!value) {
+    return '—';
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('ru-RU');
+}
+
+export function formatTime(value: string | null): string {
+  if (!value) {
+    return '—';
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
 
 /** Считается — страницу нужно опрашивать. */

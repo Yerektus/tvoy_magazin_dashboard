@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL } from '../../../shared/services/api-config';
 import { type ExtensionAccount, type ExtensionProvider } from '../../extensions/models/extension';
 import { type ApprovedPurchase, type PurchasePlan } from '../models/plan';
+import { type ProductsSnapshot } from '../models/product';
 
 /** Что отвечает бэкенд про подключение расширения. */
 interface Access {
@@ -58,9 +59,48 @@ export class Planning implements ExtensionProvider {
     return this.request<PurchasePlan | null>('get', 'plan/');
   }
 
+  /** Планировки выбранного магазина — без позиций, для таблицы. */
+  async plans(): Promise<PurchasePlan[]> {
+    return this.request<PurchasePlan[]>('get', 'plans/');
+  }
+
+  /** Одна планировка со строками. */
+  async planById(id: number): Promise<PurchasePlan> {
+    return this.request<PurchasePlan>('get', `plans/${id}/`);
+  }
+
   /** Ставит пересчёт: бэкенд считает в фоне, страница опрашивает статус. */
-  async rebuild(days: number, horizon: number): Promise<PurchasePlan> {
-    return this.request<PurchasePlan>('post', 'plan/', { days, horizon });
+  async rebuild(
+    days: number,
+    horizon: number,
+    name = '',
+    useStock = true,
+  ): Promise<PurchasePlan> {
+    return this.request<PurchasePlan>('post', 'plan/', {
+      days,
+      horizon,
+      name,
+      use_stock: useStock,
+    });
+  }
+
+  /** Считает ту же планировку заново: имя остаётся, строки пересобираются. */
+  async recount(
+    id: number,
+    days: number,
+    horizon: number,
+    useStock = true,
+  ): Promise<PurchasePlan> {
+    return this.request<PurchasePlan>('post', `plans/${id}/`, {
+      days,
+      horizon,
+      use_stock: useStock,
+    });
+  }
+
+  /** Удаляет планировку целиком — и готовую, и считающуюся. */
+  async remove(id: number): Promise<void> {
+    await this.request<void>('delete', `plans/${id}/`);
   }
 
   /** Бросает недосчитанный план. Готовый не трогает. */
@@ -70,13 +110,26 @@ export class Planning implements ExtensionProvider {
   }
 
   /** Одобряет закуп у поставщика: строки уезжают из плана в отдельную запись. */
-  async approve(supplier: string): Promise<ApprovedPurchase> {
-    return this.request<ApprovedPurchase>('post', 'plan/approve/', { supplier });
+  async approve(supplier: string, planId?: number): Promise<ApprovedPurchase> {
+    return this.request<ApprovedPurchase>('post', 'plan/approve/', {
+      supplier,
+      ...(planId == null ? {} : { plan: planId }),
+    });
   }
 
   /** Одобренные закупки выбранного магазина. */
   async approved(): Promise<ApprovedPurchase[]> {
     return this.request<ApprovedPurchase[]>('get', 'approved/');
+  }
+
+  /** Товары из продаж и состояние выгрузки чеков. */
+  async products(): Promise<ProductsSnapshot> {
+    return this.request<ProductsSnapshot>('get', 'products/');
+  }
+
+  /** Забирает чеки из UMAG. Пока грузится — страница опрашивает `products()`. */
+  async syncProducts(): Promise<ProductsSnapshot> {
+    return this.request<ProductsSnapshot>('post', 'products/', {});
   }
 
   private save(access: Access): ExtensionAccount {

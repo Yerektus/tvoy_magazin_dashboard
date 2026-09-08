@@ -1,5 +1,4 @@
 @if (loading()) {
-  <!-- Посреди страницы: пока план едет, на ней всё равно больше ничего нет. -->
   <div class="flex min-h-[70vh] items-center justify-center text-neutral-400">
     <app-spinner [size]="24" />
   </div>
@@ -19,8 +18,7 @@
 } @else if (onApproved()) {
   @if (!approved().length) {
     <app-empty title="Одобренных закупок пока нет">
-      <app-icon emptyIcon [icon]="approveIcon" [size]="40" class="mb-3 text-neutral-400" />
-      Откройте вкладку «План» и одобрите закуп у поставщика — он появится здесь.
+      Откройте планировку и одобрите закуп у поставщика — он появится здесь.
     </app-empty>
   } @else {
     <app-toolbar class="mb-4">
@@ -38,7 +36,7 @@
           (click)="toggle('' + purchase.id)"
         >
           <app-icon
-            [icon]="openIcon"
+            [icon]="chevronIcon"
             [size]="16"
             class="shrink-0 text-neutral-400 transition-transform duration-200 motion-reduce:transition-none"
             [class.rotate-90]="opened().has('' + purchase.id)"
@@ -88,7 +86,6 @@
                     class="flex items-center gap-2 whitespace-nowrap"
                     [class]="isOut(item) ? 'text-red-600' : 'text-amber-600'"
                   >
-                    <app-icon [icon]="isOut(item) ? outIcon : lowIcon" />
                     {{ formatCover(item.cover_days) }}
                   </span>
                 </ng-template>
@@ -121,255 +118,85 @@
       </div>
     }
   }
-} @else if (calculating()) {
-  <!-- Пока считается, на странице только спиннер: настройки и старый план
-       мешают, а шаги расчёта всплывают под ним. -->
-  <div class="flex min-h-[70vh] flex-col items-center justify-center text-neutral-400">
-    <app-spinner [size]="24" />
-    <p
-      class="relative mt-4 min-h-10 w-full max-w-lg px-4 text-center text-sm leading-5 text-neutral-500"
-      aria-live="polite"
-    >
-      @if (hint()) {
-        <span
-          class="absolute inset-x-0 motion-reduce:animate-none"
-          [class.animate-hint-in]="hintPhase() === 'in'"
-          [class.animate-hint-out]="hintPhase() === 'out'"
-        >
-          {{ hint() }}
-        </span>
-      }
+} @else {
+  <app-toolbar>
+    <p class="text-sm text-neutral-500">
+      Всего: <span class="text-black">{{ plans().length }}</span>
     </p>
 
-    <app-button class="mt-2" variant="secondary" [loading]="cancelling()" (click)="cancel()">
-      Отменить
-    </app-button>
-  </div>
-} @else if (failed()) {
-  <p class="mt-4 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-    {{ plan()?.error || 'Не удалось посчитать план' }}
-  </p>
-
-  <app-empty title="Не удалось посчитать">
-    <div emptyAction class="mt-4">
-      <app-button variant="primary" [loading]="busy()" (click)="rebuild()">
+    <div toolbarActions>
+      <app-button variant="primary" (click)="dialogOpen.set(true)">
         <span class="flex items-center gap-2">
-          <app-icon [icon]="retryIcon" />
-          Спланировать заново
+          <app-icon [icon]="addIcon" />
+          Новая планировка
         </span>
       </app-button>
     </div>
-  </app-empty>
-} @else {
-  @if (plan()) {
-    <app-toolbar class="mb-4">
-      @if (groups().length) {
-        <p class="text-sm text-neutral-500">
-          Поставщиков: <span class="text-black">{{ groups().length }}</span>
-        </p>
-      }
+  </app-toolbar>
 
-      <div toolbarActions class="flex items-center gap-1">
-        <!-- Порядок групп меняется на месте: пересчитывать план для этого не нужно. -->
-        @if (groups().length) {
-          <app-menu [customTrigger]="true" ariaLabel="Порядок поставщиков">
-            <app-button
-              appMenuTrigger
-              variant="ghost"
-              [icon]="true"
-              ariaLabel="Порядок поставщиков"
-            >
-              <app-icon [icon]="sortIcon" [size]="18" />
-            </app-button>
-
-            @for (item of sorts; track item.value) {
-              <button appMenuItem (click)="setSort(item.value)">
-                {{ item.label }}
-
-                @if (sort() === item.value) {
-                  <app-icon [icon]="chosenIcon" [size]="14" class="ml-auto text-sky-600" />
-                }
-              </button>
-            }
-          </app-menu>
-        }
-
-        <!-- Настройки расчёта и пересчёт живут в одном меню: по отдельности они
-           занимали всю панель, а нужны редко. -->
-        <div class="relative" #filter>
-          <app-button
-            variant="ghost"
-            [icon]="true"
-            ariaLabel="Настройки расчёта"
-            [ariaExpanded]="filterOpen()"
-            (click)="filterOpen.set(!filterOpen())"
-          >
-            <app-icon [icon]="filterIcon" [size]="18" />
-          </app-button>
-
-          @if (filterOpen()) {
-            <div
-              class="animate-fade-in absolute right-0 z-20 mt-1 w-60 rounded-sm border border-neutral-200 bg-white p-3 shadow-lg motion-reduce:animate-none"
-            >
-              <app-select
-                class="w-full mb-2"
-                [options]="periods"
-                [value]="days()"
-                ariaLabel="Период анализа"
-                [disabled]="busy() || building()"
-                (selected)="setDays($event)"
-              />
-
-              <app-select
-                class="mb-2 w-full"
-                [options]="horizons"
-                [value]="horizon()"
-                ariaLabel="Горизонт закупа"
-                [disabled]="busy() || building()"
-                (selected)="setHorizon($event)"
-              />
-
-              <app-button
-                class="block"
-                variant="primary"
-                [fullWidth]="true"
-                [loading]="busy() || building()"
-                (click)="apply()"
-              >
-                <span class="flex items-center justify-center gap-2">
-                  <app-icon [icon]="retryIcon" />
-                  Применить
-                </span>
-              </app-button>
-            </div>
-          }
-        </div>
-      </div>
-    </app-toolbar>
-  }
-
-  @if (!plan()) {
-    <!-- Плана ещё не было: кнопка стоит прямо здесь, а не прячется в
-         настройках расчёта — иначе первый шаг искать негде. -->
-    <app-empty title="Плана ещё нет">
-      Посчитаем по продажам и остаткам из UMAG, что и сколько дозаказать. Займёт около минуты.
-
-      <div emptyAction class="mt-4">
-        <app-button variant="primary" [loading]="busy()" (click)="rebuild()">
-          <span class="flex items-center gap-2">
-            <app-icon [icon]="retryIcon" />
-            Посчитать план
-          </span>
-        </app-button>
-      </div>
-    </app-empty>
-  }
-
-  <!-- Только у посчитанного плана: пока плана нет, «заказывать нечего» звучит
-       как вывод, хотя ничего ещё не считали. -->
-  @if (plan() && !groups().length && !building()) {
-    <p class="mt-6 text-sm text-neutral-500">Всего хватает — заказывать нечего</p>
-  }
-
-  <!-- Заказ едет поставщику целиком, поэтому план разложен по ним.
-       Группы свёрнуты, пока пользователь сам не раскроет. -->
-  @for (group of groups(); track group.supplier) {
-    <div class="border-b border-neutral-100">
-      <div
-        class="flex w-full items-center gap-3 px-3 py-3 transition hover:bg-neutral-100"
+  <app-table
+    class="mt-4 block"
+    minWidth="min-w-[48rem]"
+    [rows]="plans()"
+    [trackKey]="trackPlan"
+    [loading]="loading()"
+    [empty]="emptyText()"
+    [clickable]="true"
+    (rowClick)="open($event)"
+  >
+    <ng-template appTableColumn="name" header="Планировка" width="w-72" let-plan>
+      <a
+        [routerLink]="['/purchases', plan.id]"
+        class="block font-normal break-words hover:text-sky-600"
       >
-        <button
-          type="button"
-          class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left select-none"
-          [attr.aria-expanded]="opened().has(group.supplier)"
-          (click)="toggle(group.supplier)"
-        >
-          <app-icon
-            [icon]="openIcon"
-            [size]="16"
-            class="shrink-0 text-neutral-400 transition-transform duration-200 motion-reduce:transition-none"
-            [class.rotate-90]="opened().has(group.supplier)"
-          />
+        {{ planTitle(plan) }}
+      </a>
+      <p class="mt-0.5 text-neutral-400">
+        {{ horizonLabel(plan.horizon) }}@if (plan.use_stock === false) {
+          · без склада
+        }
+      </p>
+    </ng-template>
 
-          <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ group.supplier }}</span>
+    <ng-template appTableColumn="status" header="Статус" width="w-40" let-plan>
+      <span class="flex items-center gap-2 whitespace-nowrap" [class]="statusClasses(plan.status)">
+        <app-icon [icon]="statusIcon(plan.status)" />
+        {{ statusLabel(plan.status) }}
+      </span>
+    </ng-template>
+
+    <ng-template appTableColumn="total" header="К заказу" width="w-40" align="right" let-plan>
+      @if (plan.status === 'ready') {
+        <p>{{ plan.items_total }} поз.</p>
+        <p class="mt-0.5 text-neutral-400">{{ formatMoney(plan.total_cost) }}</p>
+      } @else {
+        <span class="text-neutral-400">—</span>
+      }
+    </ng-template>
+
+    <ng-template appTableColumn="time" header="Дата" width="w-28" let-plan>
+      <p class="whitespace-nowrap text-neutral-500">{{ formatDate(plan.created_at) }}</p>
+      <p class="mt-0.5 whitespace-nowrap text-neutral-400">{{ formatTime(plan.created_at) }}</p>
+    </ng-template>
+
+    <ng-template appTableColumn="actions" width="w-12" align="right" let-plan>
+      <app-menu ariaLabel="Действия с планировкой">
+        <button appMenuItem (click)="open(plan)">
+          <app-icon [icon]="openIcon" [size]="14" />
+          Открыть
         </button>
 
-        @if (plan()?.status === 'ready') {
-          <app-button
-            variant="ghost"
-            [loading]="approving() === group.supplier"
-            [disabled]="!!approving() || busy() || building()"
-            (click)="approve(group)"
-          >
-            <span class="flex items-center gap-1.5 text-emerald-700">
-              <app-icon [icon]="approveIcon" [size]="16" />
-              Одобрить
-            </span>
-          </app-button>
-        }
-      </div>
-
-      <!-- Закрытая группа держится в разметке, пока играет анимация: позиций в
-           плане под тысячу, и оставлять их там дольше незачем. -->
-      @if (visible().has(group.supplier)) {
-        <div
-          class="grid grid-rows-[1fr] motion-reduce:animate-none"
-          [class]="opened().has(group.supplier) ? 'animate-accordion-in' : 'animate-accordion-out'"
-        >
-          <div class="overflow-hidden">
-            <app-table
-              class="block pb-4"
-              minWidth="min-w-[56rem]"
-              [rows]="group.items"
-              [trackKey]="trackItem"
-            >
-              <ng-template appTableColumn="name" header="Товар" width="w-60" let-item>
-                <p class="break-words">{{ item.name }}</p>
-                <p class="mt-0.5 text-neutral-400">{{ item.barcode || 'без штрихкода' }}</p>
-              </ng-template>
-
-              <ng-template appTableColumn="stock" header="Остаток" width="w-28" let-item>
-                <p [class]="isOut(item) ? 'text-red-600' : ''">
-                  {{ formatAmount(item.stock) }} {{ item.measure }}
-                </p>
-                <p class="mt-0.5 text-neutral-400">{{ formatAmount(item.per_day) }} в день</p>
-              </ng-template>
-
-              <ng-template appTableColumn="cover" header="Хватит на" width="w-32" let-item>
-                <span
-                  class="flex items-center gap-2 whitespace-nowrap"
-                  [class]="isOut(item) ? 'text-red-600' : 'text-amber-600'"
-                >
-                  <app-icon [icon]="isOut(item) ? outIcon : lowIcon" />
-                  {{ formatCover(item.cover_days) }}
-                </span>
-              </ng-template>
-
-              <ng-template
-                appTableColumn="suggested"
-                header="Заказать"
-                width="w-28"
-                align="right"
-                let-item
-              >
-                <span class="font-medium"
-                  >{{ formatAmount(item.suggested) }} {{ item.measure }}</span
-                >
-              </ng-template>
-
-              <ng-template
-                appTableColumn="cost"
-                header="На сумму"
-                width="w-32"
-                align="right"
-                let-item
-              >
-                <span class="text-neutral-500">{{ formatMoney(item.cost) }}</span>
-              </ng-template>
-            </app-table>
-          </div>
-        </div>
-      }
-    </div>
-  }
+        <button appMenuItem class="text-red-600" (click)="remove(plan)">
+          <app-icon [icon]="removeIcon" [size]="14" />
+          Удалить
+        </button>
+      </app-menu>
+    </ng-template>
+  </app-table>
 }
+
+<app-create-plan-dialog
+  [open]="dialogOpen()"
+  (closed)="dialogOpen.set(false)"
+  (created)="onCreated($event)"
+/>

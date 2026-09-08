@@ -31,7 +31,12 @@ export class MainLayout {
    */
   protected readonly nav = computed<readonly SidebarItem[]>(() => [
     ...(this.recognition.connected() ? [{ label: 'Документы', route: '/documents' }] : []),
-    ...(this.planning.connected() ? [{ label: 'Планирование закупов', route: '/purchases' }] : []),
+    ...(this.planning.connected()
+      ? [
+          { label: 'Товары', route: '/products' },
+          { label: 'Планирование закупов', route: '/purchases' },
+        ]
+      : []),
     ...(this.auth.managesOrganization() ? [{ label: 'Расширение', route: '/settings' }] : []),
   ]);
 

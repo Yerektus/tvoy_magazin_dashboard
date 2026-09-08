@@ -1,0 +1,42 @@
+<app-modal [open]="open()" title="Новая планировка" (closed)="cancel()">
+  <form class="grid gap-4" [formGroup]="form" (ngSubmit)="submit()">
+    <app-text-field
+      formControlName="name"
+      label="Название"
+      placeholder="Например, Закуп на неделю"
+      [errorMessages]="{ required: 'Как назвать планировку?' }"
+    />
+
+    <div>
+      <p class="mb-1.5 text-sm font-medium">На сколько дней закупить</p>
+      <app-select
+        class="w-full"
+        [options]="horizons"
+        [value]="horizon()"
+        ariaLabel="На сколько дней закупить"
+        [disabled]="sending()"
+        (selected)="setHorizon($event)"
+      />
+    </div>
+
+    <label class="flex cursor-pointer items-start gap-2.5">
+      <app-checkbox
+        class="mt-0.5"
+        [checked]="useStock()"
+        [disabled]="sending()"
+        ariaLabel="Учитывать остаток на складе"
+        (toggled)="useStock.set($event)"
+      />
+      <span>
+        <span class="block text-sm font-medium">Учитывать остаток на складе</span>
+      </span>
+    </label>
+
+    <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+  </form>
+
+  <div modalActions class="flex gap-2">
+    <app-button [disabled]="sending()" (click)="cancel()">Отмена</app-button>
+    <app-button variant="primary" [loading]="sending()" (click)="submit()">Посчитать</app-button>
+  </div>
+</app-modal>
