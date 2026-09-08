@@ -49,6 +49,6 @@ export class Login {
   /** Куда вернуть после входа. Чужие адреса игнорируем. */
   private returnUrl(): string {
     const target = this.route.snapshot.queryParamMap.get('returnUrl');
-    return target?.startsWith('/') && !target.startsWith('//') ? target : '/documents';
+    return target?.startsWith('/') && !target.startsWith('//') ? target : '/';
   }
 }

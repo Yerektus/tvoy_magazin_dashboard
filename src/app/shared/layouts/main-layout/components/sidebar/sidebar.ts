@@ -6,6 +6,7 @@ import { Avatar } from '../../../../components/avatar/avatar';
 import { Icon } from '../../../../components/icon/icon';
 import { Menu, MenuTrigger } from '../../../../components/menu/menu';
 import { MenuItem } from '../../../../components/menu/menu-item';
+import { Spinner } from '../../../../components/spinner/spinner';
 
 export interface SidebarItem {
   label: string;
@@ -15,7 +16,7 @@ export interface SidebarItem {
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, RouterLinkActive, Avatar, Icon, Menu, MenuItem, MenuTrigger],
+  imports: [RouterLink, RouterLinkActive, Avatar, Icon, Menu, MenuItem, MenuTrigger, Spinner],
   templateUrl: './sidebar.html',
   host: {
     // До lg сайдбар выезжает поверх страницы: на телефоне отдавать ему
@@ -31,6 +32,8 @@ export interface SidebarItem {
 })
 export class Sidebar {
   readonly items = input.required<readonly SidebarItem[]>();
+  /** Пока спрашиваем расширения — вместо пунктов меню крутится спиннер. */
+  readonly loading = input(false);
   /** Открыт ли сайдбар. Ширина съезжает к нулю, содержимое обрезается. */
   readonly open = input(true);
   /** Перешли по пункту меню — на телефоне шторку пора закрыть. */

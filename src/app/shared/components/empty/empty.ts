@@ -6,6 +6,7 @@ import { Component, input } from '@angular/core';
  *
  * ```html
  * <app-empty title="Расширение не подключено">
+ *   <app-icon emptyIcon [icon]="plugIcon" [size]="40" class="mb-3 text-neutral-400" />
  *   Подключите его на странице расширения.
  *   <a emptyAction routerLink="/settings/planning" class="mt-4 inline-block">Открыть →</a>
  * </app-empty>

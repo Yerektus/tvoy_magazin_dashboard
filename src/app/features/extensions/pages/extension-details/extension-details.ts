@@ -147,7 +147,7 @@ export class ExtensionDetails {
 
     const agreed = await this.confirm.ask({
       title: `Отключить ${extension.name}?`,
-      message: `Накладные перестанут уходить в ${extension.name}, пока не войдёте заново.`,
+      message: `${extension.name} перестанет работать, пока не подключите снова.`,
       confirmLabel: 'Отключить',
       danger: true,
     });

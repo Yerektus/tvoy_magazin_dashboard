@@ -4,20 +4,26 @@
   </div>
 
   <nav class="flex flex-col gap-1 p-3">
-    @for (item of items(); track item.label) {
-      @if (item.route) {
-        <a
-          [routerLink]="item.route"
-          routerLinkActive="bg-neutral-200 font-medium text-neutral-900"
-          class="rounded-sm px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-neutral-200 hover:text-neutral-900"
-          (click)="navigated.emit()"
-        >
-          {{ item.label }}
-        </a>
-      } @else {
-        <span class="rounded-sm px-3 py-1.5 text-sm text-neutral-400" title="Скоро">{{
-          item.label
-        }}</span>
+    @if (loading()) {
+      <div class="flex justify-center py-6 text-neutral-400">
+        <app-spinner [size]="20" />
+      </div>
+    } @else {
+      @for (item of items(); track item.label) {
+        @if (item.route) {
+          <a
+            [routerLink]="item.route"
+            routerLinkActive="bg-neutral-200 font-medium text-neutral-900"
+            class="rounded-sm px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-neutral-200 hover:text-neutral-900"
+            (click)="navigated.emit()"
+          >
+            {{ item.label }}
+          </a>
+        } @else {
+          <span class="rounded-sm px-3 py-1.5 text-sm text-neutral-400" title="Скоро">{{
+            item.label
+          }}</span>
+        }
       }
     }
   </nav>

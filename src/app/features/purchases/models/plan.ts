@@ -89,8 +89,52 @@ export function formatMoney(value: string | number | null): string {
   return `${Math.round(number).toLocaleString('ru-RU')} ₸`;
 }
 
+/** Когда одобрили закуп: дата и время одной строкой. */
+export function formatApprovedAt(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/** Одобренный закуп у одного поставщика. */
+export interface ApprovedPurchaseItem {
+  position: number;
+  barcode: string;
+  name: string;
+  measure: string;
+  sold: string;
+  stock: string;
+  per_day: string;
+  cover_days: string | null;
+  suggested: string;
+  price: string | null;
+  cost: string | null;
+}
+
+export interface ApprovedPurchase {
+  id: number;
+  store_id: number | null;
+  store_name: string;
+  supplier: string;
+  items_total: number;
+  total_cost: string;
+  approved_at: string;
+  items: ApprovedPurchaseItem[];
+}
+
 /** Товар кончился — такую строку подсвечиваем. */
-export const isOut = (item: PurchasePlanItem): boolean => Number(item.cover_days ?? 0) < 1;
+export const isOut = (item: PurchasePlanItem | ApprovedPurchaseItem): boolean =>
+  Number(item.cover_days ?? 0) < 1;
 
 /** Закуп одного поставщика: с ним и поедет заказ. */
 export interface SupplierGroup {

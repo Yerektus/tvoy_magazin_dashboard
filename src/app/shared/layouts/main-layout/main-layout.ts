@@ -4,6 +4,7 @@ import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterOutlet } from '@an
 import { filter, map } from 'rxjs';
 
 import { Auth } from '../../../features/auth/services/auth';
+import { Recognition } from '../../../features/documents/services/recognition';
 import { TargetPicker } from '../../../features/extensions/components/target-picker/target-picker';
 import { Planning } from '../../../features/purchases/services/planning';
 import { Header } from './components/header/header';
@@ -20,6 +21,7 @@ export class MainLayout {
   private readonly router = inject(Router);
 
   private readonly planning = inject(Planning);
+  private readonly recognition = inject(Recognition);
   private readonly auth = inject(Auth);
 
   /**
@@ -28,10 +30,15 @@ export class MainLayout {
    * накладными работает, но организацией не заведует.
    */
   protected readonly nav = computed<readonly SidebarItem[]>(() => [
-    { label: 'Документы', route: '/documents' },
+    ...(this.recognition.connected() ? [{ label: 'Документы', route: '/documents' }] : []),
     ...(this.planning.connected() ? [{ label: 'Планирование закупов', route: '/purchases' }] : []),
     ...(this.auth.managesOrganization() ? [{ label: 'Расширение', route: '/settings' }] : []),
   ]);
+
+  /** Пока спрашиваем расширения, пункты меню ещё не окончательны. */
+  protected readonly navLoading = computed(
+    () => this.planning.loading() || this.recognition.loading(),
+  );
 
   protected readonly user = computed(() => this.auth.user()?.email ?? '');
 
@@ -39,6 +46,7 @@ export class MainLayout {
     // Состояние расширений спрашиваем один раз на загрузку: от него зависит,
     // какие страницы вообще есть в меню.
     void this.planning.load().catch(() => undefined);
+    void this.recognition.load().catch(() => undefined);
     // И кто мы — тоже: роль в сохранённом профиле могла устареть, а от неё
     // зависит, показывать ли расширения.
     void this.auth.reload();

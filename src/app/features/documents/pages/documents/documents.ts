@@ -4,6 +4,7 @@ import { ArrowRight, BadgeCheck, Plus, Trash2 } from 'lucide';
 
 import { Button } from '../../../../shared/components/button/button';
 import { Checkbox } from '../../../../shared/components/checkbox/checkbox';
+import { Empty } from '../../../../shared/components/empty/empty';
 import { Icon } from '../../../../shared/components/icon/icon';
 import { Menu } from '../../../../shared/components/menu/menu';
 import { MenuItem } from '../../../../shared/components/menu/menu-item';
@@ -23,8 +24,10 @@ import {
 import { Confirm } from '../../../../shared/services/confirm';
 import { PageHeader } from '../../../../shared/services/page-header';
 import { Toasts } from '../../../../shared/services/toasts';
+import { Auth } from '../../../auth/services/auth';
 import { Umag } from '../../../extensions/services/umag';
 import { DocumentsStore } from '../../services/documents-store';
+import { Recognition } from '../../services/recognition';
 
 /** Вкладки списка и то, чем они оборачиваются в запросе. */
 const TABS: Record<string, string> = {
@@ -46,6 +49,7 @@ const TABS: Record<string, string> = {
     TableColumn,
     Toolbar,
     AddDocumentDialog,
+    Empty,
     RouterLink,
   ],
   templateUrl: './documents.html',
@@ -66,7 +70,9 @@ export class Documents {
   protected readonly dialogOpen = signal(false);
 
   private readonly store = inject(DocumentsStore);
+  private readonly recognition = inject(Recognition);
   private readonly umag = inject(Umag);
+  private readonly auth = inject(Auth);
   private readonly header = inject(PageHeader);
   private readonly router = inject(Router);
   private readonly toasts = inject(Toasts);
@@ -76,6 +82,14 @@ export class Documents {
   protected readonly total = this.store.total;
   protected readonly loading = this.store.loading;
   protected readonly error = this.store.error;
+  protected readonly connected = this.recognition.connected;
+  protected readonly managesOrganization = this.auth.managesOrganization;
+
+  /**
+   * Расширение ещё не спросили — рано показывать приглашение подключиться:
+   * страница успела бы мигнуть пустым экраном, хотя разбор уже включён.
+   */
+  protected readonly ready = computed(() => this.recognition.account() !== null);
 
   protected readonly trackById = (document: DocumentItem) => document.id;
 
@@ -106,6 +120,16 @@ export class Documents {
 
   constructor() {
     this.header.setTabs(Object.keys(TABS));
+
+    if (this.recognition.account() === null) {
+      void this.recognition.load().catch(() => undefined);
+    }
+
+    effect(() => {
+      const locked = this.ready() && !this.connected() && this.documents().length === 0;
+
+      untracked(() => this.header.setTabs(locked ? [] : Object.keys(TABS)));
+    });
 
     effect(() => {
       const tab = this.header.activeTab();

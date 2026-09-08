@@ -3,13 +3,15 @@ import { Component, computed, input } from '@angular/core';
 import { Spinner } from '../spinner/spinner';
 
 export type ButtonType = 'button' | 'submit' | 'reset';
-export type ButtonVariant = 'default' | 'primary' | 'outline' | 'ghost';
+export type ButtonVariant = 'default' | 'secondary' | 'primary' | 'outline' | 'ghost';
 
 const BASE =
   'rounded-sm text-sm font-medium whitespace-nowrap transition cursor-pointer focus:ring-0 focus:outline-none disabled:opacity-60';
 
 const VARIANTS: Record<ButtonVariant, string> = {
   default: 'border border-neutral-200 shadow-md/5 hover:bg-neutral-100 focus:ring-slate-900/20',
+  // Без рамки: серая заливка отделяет кнопку от белого фона.
+  secondary: 'bg-neutral-100 shadow-md/5 hover:bg-neutral-200 focus:ring-slate-900/20',
   primary: 'bg-sky-500 text-white shadow-md/5 hover:bg-sky-600 focus:ring-sky-400/20',
   // То же действие, что и primary, но не спорит за внимание в списке карточек.
   outline: 'border border-sky-500 text-sky-600 hover:bg-sky-50 focus:ring-sky-400/20',
@@ -18,7 +20,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
 
 /** Квадратная кнопка под одну иконку — без горизонтальных полей. */
 const ICON_SHAPE = 'inline-flex items-center justify-center p-1';
-const TEXT_SHAPE = 'px-4 py-1.5';
+const TEXT_SHAPE = 'inline-flex items-center justify-center px-4 py-1.5';
 
 /**
  * Кнопка: `<app-button type="submit" [fullWidth]="true">Войти</app-button>`.

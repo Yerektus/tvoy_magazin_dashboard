@@ -4,26 +4,23 @@ import { firstValueFrom } from 'rxjs';
 
 import { API_BASE_URL } from '../../../shared/services/api-config';
 import { type ExtensionAccount, type ExtensionProvider } from '../../extensions/models/extension';
-import { type ApprovedPurchase, type PurchasePlan } from '../models/plan';
 
 /** Что отвечает бэкенд про подключение расширения. */
 interface Access {
   connected: boolean;
-  /** Подключён ли сам UMAG: без него считать не по чему. */
-  umag: boolean;
 }
 
 /**
- * Расширение «Планирование закупов».
+ * Расширение «Распознавание документов».
  *
- * Своего входа у него нет — оно работает поверх подключённого UMAG, поэтому
- * подключение это просто отметка, что сотрудник им пользуется. Магазин берётся
- * тот, что выбран в шапке.
+ * Своего входа у него нет: фото читает сервер, а подключение — отметка, что
+ * организация этим пользуется. Накладные общие на смену, поэтому состояние
+ * одно на всю организацию.
  */
 @Injectable({ providedIn: 'root' })
-export class Planning implements ExtensionProvider {
+export class Recognition implements ExtensionProvider {
   private readonly http = inject(HttpClient);
-  private readonly url = `${API_BASE_URL}/purchases/`;
+  private readonly url = `${API_BASE_URL}/invoices/`;
 
   private readonly state = signal<ExtensionAccount | null>(null);
   private readonly loadingState = signal(false);
@@ -31,7 +28,7 @@ export class Planning implements ExtensionProvider {
   readonly account = this.state.asReadonly();
   /** Идёт первый запрос состояния — меню ещё не готово. */
   readonly loading = this.loadingState.asReadonly();
-  /** Подключено — в меню появляется страница планирования. */
+  /** Подключено — можно загружать фото и перезапускать разбор. */
   readonly connected = computed(() => this.state()?.connected === true);
 
   async load(): Promise<ExtensionAccount> {
@@ -51,32 +48,6 @@ export class Planning implements ExtensionProvider {
 
   async disconnect(): Promise<void> {
     this.save(await this.request<Access>('delete', 'access/'));
-  }
-
-  /** Последний посчитанный план по выбранному магазину. Пусто — не считали. */
-  async plan(): Promise<PurchasePlan | null> {
-    return this.request<PurchasePlan | null>('get', 'plan/');
-  }
-
-  /** Ставит пересчёт: бэкенд считает в фоне, страница опрашивает статус. */
-  async rebuild(days: number, horizon: number): Promise<PurchasePlan> {
-    return this.request<PurchasePlan>('post', 'plan/', { days, horizon });
-  }
-
-  /** Бросает недосчитанный план. Готовый не трогает. */
-  async cancel(planId?: number): Promise<void> {
-    const path = planId == null ? 'plan/' : `plan/?id=${planId}`;
-    await this.request<void>('delete', path);
-  }
-
-  /** Одобряет закуп у поставщика: строки уезжают из плана в отдельную запись. */
-  async approve(supplier: string): Promise<ApprovedPurchase> {
-    return this.request<ApprovedPurchase>('post', 'plan/approve/', { supplier });
-  }
-
-  /** Одобренные закупки выбранного магазина. */
-  async approved(): Promise<ApprovedPurchase[]> {
-    return this.request<ApprovedPurchase[]>('get', 'approved/');
   }
 
   private save(access: Access): ExtensionAccount {

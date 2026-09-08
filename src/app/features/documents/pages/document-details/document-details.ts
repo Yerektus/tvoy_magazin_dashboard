@@ -46,6 +46,7 @@ import {
   statusLabel,
 } from '../../models/document';
 import { DocumentsStore } from '../../services/documents-store';
+import { Recognition } from '../../services/recognition';
 import {
   type UmagPreflight,
   type UmagStore,
@@ -157,6 +158,7 @@ export class DocumentDetails {
   protected readonly trackLine = (line: DocumentLine) => line.id;
 
   private readonly store = inject(DocumentsStore);
+  private readonly recognition = inject(Recognition);
   private readonly umag = inject(Umag);
   private readonly router = inject(Router);
   private readonly header = inject(PageHeader);
@@ -177,7 +179,7 @@ export class DocumentDetails {
 
   protected readonly canRetry = computed(() => {
     const document = this.document();
-    return document !== null && !isPending(document);
+    return document !== null && !isPending(document) && this.recognition.connected();
   });
 
   /** Отметить проверенной можно разобранную и ещё не отмеченную. */
@@ -328,6 +330,10 @@ export class DocumentDetails {
     // Если по нему уже ходили, второй раз не спрашиваем.
     if (this.umag.account() === null) {
       void this.umag.load().catch(() => undefined);
+    }
+
+    if (this.recognition.account() === null) {
+      void this.recognition.load().catch(() => undefined);
     }
 
     effect(() => {

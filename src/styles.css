@@ -28,6 +28,10 @@
      пока играет закрытие. */
   --animate-accordion-in: accordion-in 200ms ease-out;
   --animate-accordion-out: accordion-out 200ms ease-in forwards;
+  /* Длительность продублирована в purchases.ts: старый текст держится,
+     пока доигрывает уход. */
+  --animate-hint-in: hint-in 400ms ease-out;
+  --animate-hint-out: hint-out 400ms ease-in forwards;
 }
 
 @keyframes fade-in {
@@ -69,5 +73,20 @@
   to {
     grid-template-rows: 0fr;
     opacity: 0;
+  }
+}
+
+/* Подпись под спиннером: появляется снизу, держится, исчезает — потом следующая. */
+@keyframes hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes hint-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
   }
 }

@@ -2,6 +2,7 @@
   <div class="flex">
     <app-sidebar
       [items]="nav()"
+      [loading]="navLoading()"
       [open]="sidebarOpen()"
       [user]="user()"
       (navigated)="closeOnPhone()"

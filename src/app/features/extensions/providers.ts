@@ -1,3 +1,4 @@
+import { Recognition } from '../documents/services/recognition';
 import { Planning } from '../purchases/services/planning';
 import { type ExtensionSetup } from './models/extension';
 import { Umag } from './services/umag';
@@ -18,6 +19,11 @@ const SETUPS: Record<string, ExtensionSetup> = {
       identity: 'Кем заходим?',
       identityHint: 'На этот номер в UMAG заведено несколько сотрудников.',
     },
+  },
+
+  // Своего входа нет: включается одной кнопкой, фото читает сервер.
+  recognition: {
+    provider: Recognition,
   },
 
   // Надстройка над UMAG: своего входа нет, включается одной кнопкой.

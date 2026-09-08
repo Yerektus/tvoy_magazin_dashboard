@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 import {
   authGuard,
   guestGuard,
+  homeGuard,
   managesOrganizationGuard,
 } from './features/auth/guards/auth-guard';
 
@@ -13,13 +14,20 @@ export const routes: Routes = [
     canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/pages/login/login').then((m) => m.Login),
   },
-  { path: '', pathMatch: 'full', redirectTo: 'documents' },
   {
     path: '',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./shared/layouts/main-layout/main-layout').then((m) => m.MainLayout),
     children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        canActivate: [homeGuard],
+        // Сюда не попадают: охранник всегда уводит на первый раздел в меню.
+        loadComponent: () =>
+          import('./features/documents/pages/documents/documents').then((m) => m.Documents),
+      },
       {
         path: 'documents',
         title: 'Документы',
@@ -58,5 +66,5 @@ export const routes: Routes = [
       },
     ],
   },
-  { path: '**', redirectTo: 'documents' },
+  { path: '**', redirectTo: '' },
 ];
