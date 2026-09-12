@@ -10,21 +10,21 @@ import { type ExtensionProvider, type ExtensionTarget } from '../../models/exten
 import { setupFor } from '../../providers';
 
 /**
- * Выбор цели подключённого расширения прямо в шапке: у UMAG это магазин,
- * в который уходят приёмки. Пока расширение не подключено, в шапке пусто.
+ * Выбор цели подключённого расширения внизу сайдбара: у UMAG это магазин,
+ * в который уходят приёмки. Пока расширение не подключено, слот пустой.
  */
 @Component({
   selector: 'app-target-picker',
   imports: [Select],
   templateUrl: './target-picker.html',
-  // Не подключено — компонент ничего не рисует и не занимает места в строке.
+  // Не подключено — компонент ничего не рисует и не занимает места в колонке.
   host: { class: 'contents' },
 })
 export class TargetPicker {
   /** Код расширения из каталога: `umag`. */
   readonly slug = input.required<string>();
 
-  /** Ширина выбора: в шапке она фиксированная, в сайдбаре — во всю колонку. */
+  /** Ширина выбора: внизу сайдбара — во всю колонку. */
   readonly width = input('w-44 sm:w-56');
 
   protected readonly busy = signal(false);
@@ -43,7 +43,7 @@ export class TargetPicker {
 
   protected readonly account = computed(() => this.provider()?.account() ?? null);
 
-  /** Вход есть — в шапке появляется выбор. */
+  /** Вход есть — в сайдбаре появляется выбор. */
   protected readonly linked = computed(() => Boolean(this.account()?.login));
 
   /** Пока список не приехал, в выборе стоит одна текущая цель. */

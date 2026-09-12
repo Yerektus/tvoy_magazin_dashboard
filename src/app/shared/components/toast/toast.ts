@@ -16,7 +16,7 @@ const ICONS: Record<ToastKind, IconNode> = {
 const CLASSES: Record<ToastKind, string> = {
   success: 'text-emerald-600',
   error: 'text-red-600',
-  info: 'text-sky-600',
+  info: 'text-blue-600',
   loading: 'text-neutral-400',
 };
 

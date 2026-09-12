@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input, output } from '@angular/core';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide';
 
@@ -9,7 +10,7 @@ import { PageHeader } from '../../../../services/page-header';
 
 @Component({
   selector: 'app-header',
-  imports: [Button, Icon, Tabs, Breadcrumbs],
+  imports: [Button, Icon, Tabs, Breadcrumbs, NgTemplateOutlet],
   templateUrl: './header.html',
   // z-20: содержимое страницы поднимает свои слои до z-10 — например, кружки
   // шагов в истории накладной, — и на прокрутке лезло поверх шапки.
@@ -22,7 +23,7 @@ export class Header {
   readonly sidebarOpen = input(true);
   readonly toggleSidebar = output<void>();
 
-  /** Крошки и табы объявляет открытая страница. */
+  /** Крошки, табы и действия справа объявляет открытая страница. */
   protected readonly page = inject(PageHeader);
 
   protected readonly menuIcon = computed(() =>

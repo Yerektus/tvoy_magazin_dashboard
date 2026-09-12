@@ -1,0 +1,25 @@
+@if (empty()) {
+  <div class="flex h-64 items-center justify-center text-sm text-neutral-400">
+    Недостаточно данных для графика
+  </div>
+} @else {
+  <div class="w-full">
+    <div class="relative h-64 w-full">
+      <canvas #chart aria-label="График продаж и прогноза"></canvas>
+    </div>
+
+    <div class="mt-3 flex flex-wrap items-center gap-4 text-xs text-neutral-500">
+      <span class="inline-flex items-center gap-2">
+        <span class="h-0.5 w-4 bg-blue-700"></span>
+        Факт
+      </span>
+      <span class="inline-flex items-center gap-2">
+        <span class="h-0.5 w-4 border-t-2 border-dashed border-amber-600"></span>
+        Прогноз
+      </span>
+      @if (measure()) {
+        <span class="text-neutral-400">{{ measure() }} в день</span>
+      }
+    </div>
+  </div>
+}

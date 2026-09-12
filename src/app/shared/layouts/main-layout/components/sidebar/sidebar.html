@@ -28,9 +28,8 @@
     }
   </nav>
 
-  <!-- Внизу — кто вошёл. Раньше это жило в шапке, но там место нужнее крошкам.
-       Туда же лейаут кладёт выбор магазина на телефоне. -->
-  <div class="mt-auto p-3">
+  <!-- Внизу — магазин и кто вошёл. Выбор у края экрана раскрывается вверх. -->
+  <div class="mt-auto flex flex-col gap-3 p-3">
     <ng-content select="[sidebarActions]" />
 
     <app-menu class="w-full" [customTrigger]="true" [fullWidth]="true" ariaLabel="Меню профиля">

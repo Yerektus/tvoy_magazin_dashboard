@@ -185,7 +185,11 @@ export class PlanDetails {
       const plan = this.plan();
       this.header.setCrumbs([
         { label: 'Планирование закупов', route: '/purchases' },
-        { label: plan ? planTitle(plan) : 'Планировка' },
+        plan
+          ? { label: planTitle(plan) }
+          : this.missing()
+            ? { label: 'Планировка' }
+            : { label: '', loading: true },
       ]);
     });
 

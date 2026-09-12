@@ -4,7 +4,7 @@
     (dragleave)="onDragLeave()"
     (drop)="onDrop($event)"
     class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-sm border border-dashed px-6 py-8 text-center transition"
-    [class]="dragging() ? 'border-sky-400 bg-sky-50' : 'border-neutral-300 hover:border-sky-400'"
+    [class]="dragging() ? 'border-blue-400 bg-blue-50' : 'border-neutral-300 hover:border-blue-400'"
   >
     <app-icon [icon]="attachIcon" [size]="20" class="text-neutral-400" />
     <span class="text-sm text-neutral-600">Перетащите фото накладных или выберите файлы</span>

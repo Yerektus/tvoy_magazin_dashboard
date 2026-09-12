@@ -10,7 +10,7 @@
   [disabled]="disabled()"
   (input)="handleInput($event)"
   (blur)="handleBlur()"
-  class="w-full rounded-sm border border-neutral-200 px-3 py-1.5 text-sm hover:border-sky-400 outline-none placeholder:text-neutral-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 disabled:bg-slate-50 disabled:text-slate-400"
+  class="w-full rounded-sm border border-neutral-200 px-3 py-1.5 text-sm hover:border-blue-400 outline-none placeholder:text-neutral-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 disabled:bg-slate-50 disabled:text-slate-400"
   [class.border-red-400]="errorText()"
   [attr.aria-invalid]="errorText() ? true : null"
   [attr.aria-describedby]="describedBy()"

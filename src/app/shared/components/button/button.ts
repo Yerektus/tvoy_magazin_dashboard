@@ -12,15 +12,15 @@ const VARIANTS: Record<ButtonVariant, string> = {
   default: 'border border-neutral-200 shadow-md/5 hover:bg-neutral-100 focus:ring-slate-900/20',
   // Без рамки: серая заливка отделяет кнопку от белого фона.
   secondary: 'bg-neutral-100 shadow-md/5 hover:bg-neutral-200 focus:ring-slate-900/20',
-  primary: 'bg-sky-500 text-white shadow-md/5 hover:bg-sky-600 focus:ring-sky-400/20',
+  primary: 'bg-blue-500 text-white shadow-md/5 hover:bg-blue-600 focus:ring-blue-400/20',
   // То же действие, что и primary, но не спорит за внимание в списке карточек.
-  outline: 'border border-sky-500 text-sky-600 hover:bg-sky-50 focus:ring-sky-400/20',
+  outline: 'border border-blue-500 text-blue-600 hover:bg-blue-50 focus:ring-blue-400/20',
   ghost: 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 focus:ring-slate-900/20',
 };
 
 /** Квадратная кнопка под одну иконку — без горизонтальных полей. */
 const ICON_SHAPE = 'inline-flex items-center justify-center p-1';
-const TEXT_SHAPE = 'inline-flex items-center justify-center px-4 py-1.5';
+const TEXT_SHAPE = 'inline-flex h-8 items-center justify-center px-4';
 
 /**
  * Кнопка: `<app-button type="submit" [fullWidth]="true">Войти</app-button>`.

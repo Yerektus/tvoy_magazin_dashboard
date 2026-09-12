@@ -1,0 +1,87 @@
+@if (loading()) {
+  <div class="flex min-h-[70vh] items-center justify-center text-neutral-400">
+    <app-spinner [size]="24" />
+  </div>
+} @else if (!connected()) {
+  <app-empty title="Расширение не подключено">
+    Товары берутся из продаж UMAG. Подключите планирование закупов на странице расширения.
+
+    <a
+      emptyAction
+      routerLink="/settings/planning"
+      class="mt-4 inline-block text-sm text-blue-600 hover:text-blue-700"
+    >
+      Открыть расширение →
+    </a>
+  </app-empty>
+} @else if (missing()) {
+  <app-empty title="Товар не найден">
+    Такого штрихкода нет в продажах выбранного магазина.
+
+    <a
+      emptyAction
+      routerLink="/products"
+      class="mt-4 inline-block text-sm text-blue-600 hover:text-blue-700"
+    >
+      К списку товаров →
+    </a>
+  </app-empty>
+} @else if (product(); as current) {
+  <div class="mb-6 flex flex-wrap gap-2">
+    <app-select
+      class="w-48"
+      [options]="historyOptions"
+      [value]="historyDays()"
+      ariaLabel="Период истории"
+      (selected)="setHistoryDays($event)"
+    />
+    <app-select
+      class="w-52"
+      [options]="horizons"
+      [value]="horizon()"
+      ariaLabel="Горизонт прогноза"
+      (selected)="setHorizon($event)"
+    />
+  </div>
+
+  <div class="px-6 mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <app-stat-card [icon]="soldIcon" label="Продано">
+      {{ formatAmount(current.sold) }}{{ current.measure ? ' ' + current.measure : '' }}
+    </app-stat-card>
+
+    <app-stat-card [icon]="lastSaleIcon" label="Последняя продажа">
+      {{ formatDate(current.last_sold) }} {{ formatTime(current.last_sold) }}
+    </app-stat-card>
+
+    <app-stat-card [icon]="forecastIcon" label="Прогноз">
+      @if (forecast(); as forecast) {
+        {{ formatAmount(forecast.quantity) }}{{ current.measure ? ' ' + current.measure : '' }}
+      } @else {
+        <span class="text-neutral-400">Нет данных</span>
+      }
+    </app-stat-card>
+
+    <app-stat-card [icon]="safetyStockIcon" label="Страховой запас">
+      @if (forecast(); as forecast) {
+        {{ formatAmount(forecast.safety_stock) }}{{ current.measure ? ' ' + current.measure : '' }}
+      } @else {
+        <span class="text-neutral-400">—</span>
+      }
+    </app-stat-card>
+  </div>
+
+  <section class="rounded-sm p-4 sm:p-5">
+    <div class="mb-4">
+      <h2 class="text-sm font-medium text-neutral-900">Продажи и прогноз</h2>
+      <p class="mt-1 text-sm text-neutral-400">
+        Факт за выбранный период и ожидаемый расход на горизонт закупа
+      </p>
+    </div>
+
+    <app-sales-forecast-chart
+      [history]="current.history"
+      [forecast]="forecast()?.series ?? []"
+      [measure]="current.measure"
+    />
+  </section>
+}

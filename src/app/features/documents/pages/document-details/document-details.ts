@@ -345,7 +345,11 @@ export class DocumentDetails {
       const document = this.document();
       this.header.setCrumbs([
         { label: 'Документы', route: '/documents' },
-        { label: document ? documentTitle(document) : 'Накладная' },
+        document
+          ? { label: documentTitle(document) }
+          : this.loading()
+            ? { label: '', loading: true }
+            : { label: 'Накладная' },
       ]);
     });
 

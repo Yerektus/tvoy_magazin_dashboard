@@ -8,14 +8,7 @@
       (navigated)="closeOnPhone()"
       (logout)="logout()"
     >
-      <!-- Обёртка статична: содержимое `@if` проекция по атрибуту не находит. -->
-      <span sidebarActions class="contents">
-        @if (!wide()) {
-          <div class="mb-3">
-            <app-target-picker slug="umag" width="w-full" />
-          </div>
-        }
-      </span>
+      <app-target-picker sidebarActions slug="umag" width="w-full" />
     </app-sidebar>
 
     @if (sidebarOpen()) {
@@ -30,13 +23,7 @@
         [title]="pageTitle()"
         [sidebarOpen]="sidebarOpen()"
         (toggleSidebar)="sidebarOpen.set(!sidebarOpen())"
-      >
-        <span headerActions class="contents">
-          @if (wide()) {
-            <app-target-picker slug="umag" />
-          }
-        </span>
-      </app-header>
+      />
       <main class="min-w-0 px-4 py-6 sm:px-6">
         <router-outlet />
       </main>

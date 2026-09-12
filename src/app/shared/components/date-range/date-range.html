@@ -1,0 +1,84 @@
+<!-- Поле выглядит как обычный инпут, а окно открывает клик по нему целиком. -->
+<div
+  role="button"
+  tabindex="0"
+  aria-haspopup="dialog"
+  [attr.aria-expanded]="open()"
+  aria-label="Фильтр по дате: выбрать период"
+  class="flex h-8 w-full cursor-pointer items-center rounded-md border border-neutral-200 bg-white pr-2 outline-none transition hover:border-blue-400 focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-400/20"
+  [class.border-blue-400]="open()"
+  [class.ring-2]="open()"
+  [class.ring-blue-400/20]="open()"
+  (click)="toggle()"
+  (keydown.enter)="toggle()"
+  (keydown.space)="$event.preventDefault(); toggle()"
+>
+  <span
+    class="min-w-0 flex-1 truncate px-2 text-left text-sm"
+    [class.text-neutral-400]="!label()"
+  >
+    {{ label() || 'От - До' }}
+  </span>
+
+  @if (label()) {
+    <button
+      type="button"
+      aria-label="Очистить даты"
+      class="cursor-pointer rounded p-0.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600"
+      (click)="clearTrigger($event)"
+    >
+      <app-icon [icon]="clearIcon" [size]="12" />
+    </button>
+  } @else {
+    <app-icon [icon]="calendarIcon" [size]="14" class="pointer-events-none text-neutral-400" />
+  }
+</div>
+
+@if (open()) {
+  <div
+    #panel
+    role="dialog"
+    aria-label="Выбор периода"
+    class="animate-fade-in fixed z-50 w-[304px] rounded-md border border-neutral-200 bg-white p-3 shadow-lg motion-reduce:animate-none"
+    [style.top.px]="position().top"
+    [style.left.px]="position().left"
+  >
+    <div class="flex items-center justify-between">
+      <app-button variant="ghost" [icon]="true" ariaLabel="Предыдущий месяц" (click)="shiftMonth(-1)">
+        <app-icon [icon]="prevIcon" [size]="16" />
+      </app-button>
+      <p class="text-sm font-medium">{{ monthTitle() }}</p>
+      <app-button
+        variant="ghost"
+        [icon]="true"
+        ariaLabel="Следующий месяц"
+        [disabled]="!canNext()"
+        (click)="shiftMonth(1)"
+      >
+        <app-icon [icon]="nextIcon" [size]="16" />
+      </app-button>
+    </div>
+
+    <div class="mt-1 grid grid-cols-7 text-center text-[11px] text-neutral-400">
+      @for (day of weekdays; track day) {
+        <span class="py-1">{{ day }}</span>
+      }
+    </div>
+
+    <div class="grid grid-cols-7" (mouseleave)="unhover()">
+      @for (cell of cells(); track cell.iso) {
+        <button
+          type="button"
+          class="flex h-8 items-center justify-center text-sm transition outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40"
+          [class]="dayClass(cell)"
+          [disabled]="cell.disabled"
+          (click)="pick(cell)"
+          (mouseenter)="hover(cell)"
+          (focus)="hover(cell)"
+        >
+          {{ cell.label }}
+        </button>
+      }
+    </div>
+  </div>
+}

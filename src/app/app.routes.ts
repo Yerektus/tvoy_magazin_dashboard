@@ -49,6 +49,14 @@ export const routes: Routes = [
           import('./features/purchases/pages/products/products').then((m) => m.Products),
       },
       {
+        path: 'products/:barcode',
+        title: 'Товар',
+        loadComponent: () =>
+          import('./features/purchases/pages/product-details/product-details').then(
+            (m) => m.ProductDetails,
+          ),
+      },
+      {
         path: 'purchases',
         title: 'Планирование закупов',
         loadComponent: () =>

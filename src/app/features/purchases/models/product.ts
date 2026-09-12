@@ -9,14 +9,55 @@ export interface StoreProduct {
   last_sold: string | null;
 }
 
-/** Вкладка «Товары»: выгрузка чеков и список, собранный по ним. */
+/** День на графике: сколько ушло с полки. */
+export interface DailySold {
+  date: string;
+  sold: string;
+}
+
+/** Прогноз спроса на горизонт закупа. */
+export interface ProductForecast {
+  model: string;
+  quantity: string;
+  per_day: string;
+  safety_stock: string;
+  holiday_factor: string;
+  error: string;
+  observations: number;
+  series: DailySold[];
+}
+
+/** Карточка товара: продажи и прогноз. */
+export interface StoreProductDetail extends StoreProduct {
+  horizon: number;
+  history_days: number;
+  history: DailySold[];
+  forecast: ProductForecast | null;
+}
+
+/** Вкладка «Товары»: выгрузка чеков и одна страница списка. */
 export interface ProductsSnapshot {
   status: SalesSyncStatus;
   synced_at: string | null;
   history_from: string | null;
   error: string;
   items_total: number;
+  page: number;
+  page_size: number;
   items: StoreProduct[];
+}
+
+/** Что спрашиваем у списка: поиск, сортировка и страница. */
+export interface ProductsQuery {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+  sort?: 'name' | 'sold' | 'last';
+  order?: 'asc' | 'desc';
+  lastFrom?: string;
+  lastTo?: string;
+  soldFrom?: string;
+  soldTo?: string;
 }
 
 export const emptyProducts = (): ProductsSnapshot => ({
@@ -25,5 +66,21 @@ export const emptyProducts = (): ProductsSnapshot => ({
   history_from: null,
   error: '',
   items_total: 0,
+  page: 1,
+  page_size: 50,
   items: [],
 });
+
+const MODEL_LABELS: Record<string, string> = {
+  average: 'Среднее',
+  weighted_average: 'Взвешенное среднее',
+  holt: 'Хольт',
+  holt_winters_weekly: 'Хольт–Винтерс',
+  croston_sba: 'Кростон',
+  seasonal_naive_year: 'Сезонный (год)',
+};
+
+/** Как назвать модель прогноза в карточке. */
+export function forecastModelLabel(model: string): string {
+  return MODEL_LABELS[model] ?? model;
+}

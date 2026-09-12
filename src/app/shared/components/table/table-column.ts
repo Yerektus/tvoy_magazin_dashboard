@@ -10,6 +10,8 @@ export class TableColumn {
   /** Текст в шапке. Если нужна разметка — передайте `headerTemplate`. */
   readonly header = input('');
   readonly headerTemplate = input<TemplateRef<unknown> | null>(null);
+  /** Поле фильтра под заголовком. Пустые колонки оставляют ячейку пустой. */
+  readonly filterTemplate = input<TemplateRef<unknown> | null>(null);
   /** Текст в подвале — например итог по колонке. Разметка — через `footerTemplate`. */
   readonly footer = input('');
   readonly footerTemplate = input<TemplateRef<unknown> | null>(null);

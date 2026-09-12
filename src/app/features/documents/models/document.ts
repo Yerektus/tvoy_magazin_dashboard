@@ -69,7 +69,7 @@ const STATUS_ICONS: Record<DocumentStatus, IconNode> = {
 
 const STATUS_CLASSES: Record<DocumentStatus, string> = {
   pending: 'text-neutral-500',
-  processing: 'text-sky-600',
+  processing: 'text-blue-600',
   done: 'text-emerald-600',
   checked: 'text-emerald-700',
   failed: 'text-red-600',

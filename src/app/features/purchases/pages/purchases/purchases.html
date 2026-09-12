@@ -10,7 +10,7 @@
     <a
       emptyAction
       routerLink="/settings/planning"
-      class="mt-4 inline-block text-sm text-sky-600 hover:text-sky-700"
+      class="mt-4 inline-block text-sm text-blue-600 hover:text-blue-700"
     >
       Открыть расширение →
     </a>
@@ -147,7 +147,7 @@
     <ng-template appTableColumn="name" header="Планировка" width="w-72" let-plan>
       <a
         [routerLink]="['/purchases', plan.id]"
-        class="block font-normal break-words hover:text-sky-600"
+        class="block font-normal break-words hover:text-blue-600"
       >
         {{ planTitle(plan) }}
       </a>

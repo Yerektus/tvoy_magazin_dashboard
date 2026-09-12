@@ -47,7 +47,7 @@ export class ExtensionDetails {
   protected readonly disconnectIcon = Unplug;
 
   protected readonly barItem = `${BAR_ITEM} text-neutral-500 hover:text-neutral-900`;
-  protected readonly barPrimary = `${BAR_ITEM} text-sky-600 hover:text-sky-700`;
+  protected readonly barPrimary = `${BAR_ITEM} text-blue-600 hover:text-blue-700`;
   protected readonly barDanger = `${BAR_ITEM} text-red-600 hover:text-red-700`;
 
   protected readonly extension = signal<Extension | null>(null);
@@ -92,6 +92,14 @@ export class ExtensionDetails {
   constructor() {
     effect(() => {
       void this.load(this.slug());
+    });
+
+    effect(() => {
+      const extension = this.extension();
+      this.header.setCrumbs([
+        { label: 'Расширение', route: '/settings' },
+        extension ? { label: extension.name } : { label: '', loading: true },
+      ]);
     });
 
     inject(DestroyRef).onDestroy(() => this.header.clear());
@@ -170,14 +178,11 @@ export class ExtensionDetails {
 
   private async load(slug: string): Promise<void> {
     this.loading.set(true);
+    this.extension.set(null);
 
     try {
       const extension = await this.catalog.get(slug);
       this.extension.set(extension);
-      this.header.setCrumbs([
-        { label: 'Расширение', route: '/settings' },
-        { label: extension.name },
-      ]);
 
       // Состояние обязательных расширений — чтобы показать, чего не хватает.
       await Promise.all(extension.requires.map((required) => this.warm(required)));

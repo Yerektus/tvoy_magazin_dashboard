@@ -29,6 +29,8 @@ export class Table<T> {
   readonly loading = input(false);
   /** Минимальная ширина, например `min-w-3xl`: на узком экране таблица прокрутится. */
   readonly minWidth = input('');
+  /** Ограничивает высоту: тело таблицы прокручивается, шапка остаётся на месте. */
+  readonly maxHeight = input('');
   /** Строка кликабельна целиком — курсор и переход по Enter. */
   readonly clickable = input(false);
 
@@ -40,6 +42,25 @@ export class Table<T> {
   protected readonly hasFooter = computed(() =>
     this.columns().some((column) => column.footer() || column.footerTemplate()),
   );
+
+  /** Вторая строка шапки — фильтры по колонкам. */
+  protected readonly hasFilters = computed(() =>
+    this.columns().some((column) => column.filterTemplate()),
+  );
+
+  /** Пустой список не схлопывает таблицу, если задана высота. */
+  protected readonly fillEmpty = computed(() => !!this.maxHeight() && this.rows().length === 0);
+
+  protected readonly shellClass = computed(() => {
+    const box = this.maxHeight();
+    if (!box) {
+      return 'overflow-x-auto';
+    }
+
+    return this.fillEmpty()
+      ? `${box} flex flex-col overflow-x-auto overflow-y-hidden`
+      : `${box} overflow-auto`;
+  });
 
   protected key(row: T, index: number): unknown {
     return this.trackKey()?.(row) ?? index;

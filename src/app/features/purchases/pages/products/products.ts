@@ -1,18 +1,35 @@
-import { Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import {
+  Component,
+  DestroyRef,
+  TemplateRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RefreshCw } from 'lucide';
 
 import { Button } from '../../../../shared/components/button/button';
+import { DateRange, type DateRangeValue } from '../../../../shared/components/date-range/date-range';
+import {
+  NumberRange,
+  type NumberRangeValue,
+} from '../../../../shared/components/number-range/number-range';
 import { Empty } from '../../../../shared/components/empty/empty';
 import { Icon } from '../../../../shared/components/icon/icon';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Table } from '../../../../shared/components/table/table';
 import { TableColumn } from '../../../../shared/components/table/table-column';
 import { Toolbar } from '../../../../shared/components/toolbar/toolbar';
+import { PageHeader } from '../../../../shared/services/page-header';
 import { Toasts } from '../../../../shared/services/toasts';
 import { Umag } from '../../../extensions/services/umag';
 import { formatAmount, formatDate, formatTime } from '../../models/plan';
 import {
+  type ProductsQuery,
   type ProductsSnapshot,
   type SalesSyncStatus,
   type StoreProduct,
@@ -24,6 +41,8 @@ import { Planning } from '../../services/planning';
 const POLL_INTERVAL = 2500;
 /** Сколько строк на одной странице таблицы. */
 const PAGE_SIZE = 50;
+/** Поиск не бьёт API на каждую букву. */
+const SEARCH_DELAY = 300;
 
 type SortColumn = 'name' | 'sold' | 'last';
 type SortDirection = 'asc' | 'desc';
@@ -34,7 +53,18 @@ type SortDirection = 'asc' | 'desc';
  */
 @Component({
   selector: 'app-products',
-  imports: [Button, Empty, Icon, RouterLink, Spinner, Table, TableColumn, Toolbar],
+  imports: [
+    Button,
+    DateRange,
+    Empty,
+    Icon,
+    NumberRange,
+    RouterLink,
+    Spinner,
+    Table,
+    TableColumn,
+    Toolbar,
+  ],
   templateUrl: './products.html',
 })
 export class Products {
@@ -48,58 +78,61 @@ export class Products {
   protected readonly formatTime = formatTime;
 
   protected readonly products = signal<StoreProduct[]>([]);
+  protected readonly total = signal(0);
   protected readonly status = signal<SalesSyncStatus>('idle');
   protected readonly error = signal('');
   protected readonly query = signal('');
+  protected readonly lastFrom = signal('');
+  protected readonly lastTo = signal('');
+  protected readonly soldFrom = signal('');
+  protected readonly soldTo = signal('');
   protected readonly page = signal(1);
   protected readonly sortColumn = signal<SortColumn>('sold');
   protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly loading = signal(true);
+  /** Страница или сортировка: спиннер в таблице, пока ответ не пришёл. */
+  protected readonly pending = signal(false);
 
   protected readonly trackProduct = (product: StoreProduct) => product.barcode;
 
   private readonly planning = inject(Planning);
   private readonly umag = inject(Umag);
   private readonly toasts = inject(Toasts);
+  private readonly router = inject(Router);
+  private readonly header = inject(PageHeader);
+  private readonly headerActions = viewChild<TemplateRef<unknown>>('headerActions');
 
   protected readonly connected = this.planning.connected;
   protected readonly syncing = computed(() => this.status() === 'syncing');
   protected readonly failed = computed(() => this.status() === 'failed');
-  /** Отбор по поиску, затем сортировка — пагинация режет уже это. */
-  protected readonly matched = computed(() => {
-    const query = this.query().trim().toLowerCase();
-    const items = query
-      ? this.products().filter(
-          (item) =>
-            item.name.toLowerCase().includes(query) || item.barcode.toLowerCase().includes(query),
-        )
-      : this.products();
-
-    return sortProducts(items, this.sortColumn(), this.sortDirection());
-  });
   protected readonly pageCount = computed(() =>
-    Math.max(1, Math.ceil(this.matched().length / PAGE_SIZE)),
+    Math.max(1, Math.ceil(this.total() / PAGE_SIZE)),
   );
   /** Номер, который реально показываем: не уезжаем за конец списка. */
   protected readonly shownPage = computed(() => Math.min(this.page(), this.pageCount()));
   protected readonly rangeLabel = computed(() => {
-    const total = this.matched().length.toLocaleString('ru-RU');
+    const total = this.total().toLocaleString('ru-RU');
     return `${this.rangeStart()}–${this.rangeEnd()} из ${total}`;
   });
   protected readonly rangeStart = computed(() => {
-    if (!this.matched().length) {
+    if (!this.total()) {
       return 0;
     }
 
     return (this.shownPage() - 1) * PAGE_SIZE + 1;
   });
   protected readonly rangeEnd = computed(() =>
-    Math.min(this.shownPage() * PAGE_SIZE, this.matched().length),
+    Math.min(this.shownPage() * PAGE_SIZE, this.total()),
   );
-  protected readonly visible = computed(() => {
-    const start = (this.shownPage() - 1) * PAGE_SIZE;
-    return this.matched().slice(start, start + PAGE_SIZE);
-  });
+  /** В шапке или в фильтрах что-то введено — пустой ответ это «не нашлось». */
+  protected readonly filtering = computed(
+    () =>
+      this.query().trim().length > 0 ||
+      this.lastFrom().length > 0 ||
+      this.lastTo().length > 0 ||
+      this.soldFrom().length > 0 ||
+      this.soldTo().length > 0,
+  );
 
   /**
    * Магазин из шапки: товары всегда по нему. `undefined` — про UMAG ещё не
@@ -108,9 +141,20 @@ export class Products {
   private readonly store = computed(() => this.umag.account()?.targetId);
 
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
   private version = 0;
+  /** Какой запрос списка сейчас актуальный: старый ответ страницу не откатывает. */
+  private seq = 0;
 
   constructor() {
+    effect(() => {
+      const actions = this.headerActions();
+      const hasProducts = this.total() > 0 || this.filtering();
+      this.header.setActions(
+        this.connected() && !this.loading() && hasProducts && actions ? actions : null,
+      );
+    });
+
     effect(() => {
       if (this.store() !== undefined) {
         untracked(() => void this.load());
@@ -119,23 +163,41 @@ export class Products {
 
     void this.start();
 
-    inject(DestroyRef).onDestroy(() => this.stopPolling());
+    inject(DestroyRef).onDestroy(() => {
+      this.stopPolling();
+      this.stopSearch();
+      this.header.setActions(null);
+    });
   }
 
   protected search(event: Event): void {
     this.query.set((event.target as HTMLInputElement).value);
-    this.page.set(1);
+    this.scheduleRefresh();
+  }
+
+  protected filterLastRange(range: DateRangeValue): void {
+    this.lastFrom.set(range.from);
+    this.lastTo.set(range.to);
+    void this.refresh(this.version, { table: true, page: 1 });
+  }
+
+  protected filterSoldRange(range: NumberRangeValue): void {
+    this.soldFrom.set(range.from);
+    this.soldTo.set(range.to);
+    void this.refresh(this.version, { table: true, page: 1 });
   }
 
   protected toggleSort(column: SortColumn): void {
-    if (this.sortColumn() === column) {
-      this.sortDirection.update((direction) => (direction === 'asc' ? 'desc' : 'asc'));
-    } else {
-      this.sortColumn.set(column);
-      this.sortDirection.set(column === 'name' ? 'asc' : 'desc');
-    }
+    const order: SortDirection =
+      this.sortColumn() === column
+        ? this.sortDirection() === 'asc'
+          ? 'desc'
+          : 'asc'
+        : column === 'name'
+          ? 'asc'
+          : 'desc';
 
-    this.page.set(1);
+    void this.refresh(this.version, { table: true, sort: column, order, page: 1 });
   }
 
   protected isSorted(column: SortColumn): boolean {
@@ -157,8 +219,11 @@ export class Products {
       return;
     }
 
-    this.page.set(next);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    void this.refresh(this.version, { table: true, page: next });
+  }
+
+  protected open(product: StoreProduct): void {
+    void this.router.navigate(['/products', product.barcode]);
   }
 
   protected async sync(): Promise<void> {
@@ -170,7 +235,8 @@ export class Products {
     this.error.set('');
 
     try {
-      this.apply(await this.planning.syncProducts());
+      const query = this.listing();
+      this.apply(await this.planning.syncProducts(query), query);
       this.poll();
     } catch (error) {
       this.status.set('failed');
@@ -199,9 +265,14 @@ export class Products {
     const version = ++this.version;
 
     this.stopPolling();
+    this.stopSearch();
     this.loading.set(true);
     this.apply(emptyProducts());
     this.query.set('');
+    this.lastFrom.set('');
+    this.lastTo.set('');
+    this.soldFrom.set('');
+    this.soldTo.set('');
     this.page.set(1);
     this.sortColumn.set('sold');
     this.sortDirection.set('desc');
@@ -211,13 +282,7 @@ export class Products {
         await this.planning.load();
       }
 
-      const snapshot = await this.planning.products();
-
-      if (version !== this.version) {
-        return;
-      }
-
-      this.apply(snapshot);
+      await this.refresh(version);
       this.poll();
     } catch (error) {
       if (version !== this.version) {
@@ -232,6 +297,106 @@ export class Products {
     }
   }
 
+  private scheduleRefresh(): void {
+    this.stopSearch();
+    this.searchTimer = setTimeout(
+      () => void this.refresh(this.version, { table: true, page: 1 }),
+      SEARCH_DELAY,
+    );
+  }
+
+  private stopSearch(): void {
+    if (this.searchTimer !== null) {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = null;
+    }
+  }
+
+  private async refresh(
+    version = this.version,
+    options: ProductsQuery & { table?: boolean } = {},
+  ): Promise<void> {
+    this.stopSearch();
+
+    const previous = {
+      page: this.page(),
+      sort: this.sortColumn(),
+      order: this.sortDirection(),
+    };
+    const seq = ++this.seq;
+
+    if (options.table) {
+      this.pending.set(true);
+
+      if (options.page != null) {
+        this.page.set(options.page);
+      }
+
+      if (options.sort) {
+        this.sortColumn.set(options.sort);
+      }
+
+      if (options.order) {
+        this.sortDirection.set(options.order);
+      }
+    }
+
+    const query = this.listing(options);
+
+    try {
+      const snapshot = await this.planning.products(query);
+
+      if (seq !== this.seq || version !== this.version) {
+        return;
+      }
+
+      this.apply(snapshot, query);
+
+      if (options.page != null) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } catch (error) {
+      if (seq !== this.seq || version !== this.version) {
+        return;
+      }
+
+      if (options.table) {
+        this.page.set(previous.page);
+        this.sortColumn.set(previous.sort);
+        this.sortDirection.set(previous.order);
+      }
+
+      this.toasts.error(error instanceof Error ? error.message : 'Не удалось открыть товары');
+    } finally {
+      if (seq === this.seq && version === this.version && options.table) {
+        this.pending.set(false);
+      }
+    }
+  }
+
+  private listing(overrides: ProductsQuery = {}): ProductsQuery {
+    const lastFrom = overrides.lastFrom ?? this.lastFrom();
+    const lastTo = overrides.lastTo ?? this.lastTo();
+    const from = lastFrom && lastTo && lastFrom > lastTo ? lastTo : lastFrom;
+    const to = lastFrom && lastTo && lastFrom > lastTo ? lastFrom : lastTo;
+    const sold = orderedBounds(
+      overrides.soldFrom ?? this.soldFrom(),
+      overrides.soldTo ?? this.soldTo(),
+    );
+
+    return {
+      q: overrides.q ?? this.query().trim(),
+      page: overrides.page ?? this.page(),
+      pageSize: PAGE_SIZE,
+      sort: overrides.sort ?? this.sortColumn(),
+      order: overrides.order ?? this.sortDirection(),
+      lastFrom: from || undefined,
+      lastTo: to || undefined,
+      soldFrom: sold.from,
+      soldTo: sold.to,
+    };
+  }
+
   private poll(): void {
     this.stopPolling();
 
@@ -242,14 +407,20 @@ export class Products {
     const version = this.version;
 
     this.pollTimer = setTimeout(async () => {
+      if (this.pending()) {
+        this.poll();
+        return;
+      }
+
+      const seq = this.seq;
+      const query = this.listing();
+
       try {
-        const snapshot = await this.planning.products();
+        const snapshot = await this.planning.products(query);
 
-        if (version !== this.version) {
-          return;
+        if (seq === this.seq && version === this.version) {
+          this.apply(snapshot, query);
         }
-
-        this.apply(snapshot);
       } catch {
         // Сеть моргнула — попробуем на следующем круге.
       }
@@ -265,31 +436,54 @@ export class Products {
     }
   }
 
-  private apply(snapshot: ProductsSnapshot): void {
+  private apply(snapshot: ProductsSnapshot, requested?: ProductsQuery): void {
+    if (this.stale(requested)) {
+      this.status.set(snapshot.status);
+      this.error.set(snapshot.error);
+      return;
+    }
+
     this.products.set(snapshot.items);
+    this.total.set(snapshot.items_total);
     this.status.set(snapshot.status);
     this.error.set(snapshot.error);
+
+    if (snapshot.page !== this.page()) {
+      this.page.set(snapshot.page);
+    }
+  }
+
+  private stale(requested?: ProductsQuery): boolean {
+    if (requested == null) {
+      return false;
+    }
+
+    return (
+      (requested.page != null && requested.page !== this.page()) ||
+      (requested.sort != null && requested.sort !== this.sortColumn()) ||
+      (requested.order != null && requested.order !== this.sortDirection())
+    );
   }
 }
 
-function sortProducts(
-  items: readonly StoreProduct[],
-  column: SortColumn,
-  direction: SortDirection,
-): StoreProduct[] {
-  const factor = direction === 'asc' ? 1 : -1;
+/** Границы количества: пустое или недописанное не уходит в запрос. */
+function orderedBounds(fromRaw: string, toRaw: string): { from?: string; to?: string } {
+  const from = parseBound(fromRaw);
+  const to = parseBound(toRaw);
 
-  return [...items].sort((left, right) => {
-    switch (column) {
-      case 'name':
-        return factor * left.name.localeCompare(right.name, 'ru');
-      case 'sold':
-        return factor * (Number(left.sold) - Number(right.sold));
-      case 'last': {
-        const leftDate = left.last_sold ?? '';
-        const rightDate = right.last_sold ?? '';
-        return factor * leftDate.localeCompare(rightDate);
-      }
-    }
-  });
+  if (from != null && to != null && Number(from) > Number(to)) {
+    return { from: to, to: from };
+  }
+
+  return { from, to };
+}
+
+function parseBound(value: string): string | undefined {
+  const text = value.trim().replace(/\s/g, '').replace(',', '.');
+
+  if (!text || !/^\d+(\.\d+)?$/.test(text)) {
+    return undefined;
+  }
+
+  return text;
 }

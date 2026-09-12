@@ -1,9 +1,9 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, TemplateRef, signal } from '@angular/core';
 
 import type { Breadcrumb } from '../components/breadcrumbs/breadcrumbs';
 
 /**
- * Что страница показывает в шапке: хлебные крошки и табы.
+ * Что страница показывает в шапке: хлебные крошки, табы и действия справа.
  * Страница заполняет это при создании и чистит при уходе:
  *
  * ```ts
@@ -19,6 +19,8 @@ export class PageHeader {
   private readonly tabLabels = signal<readonly string[]>([]);
   private readonly activeLabel = signal<string | null>(null);
   private readonly tabBadges = signal<Record<string, number>>({});
+  private readonly suffixText = signal('');
+  private readonly actionTpl = signal<TemplateRef<unknown> | null>(null);
 
   /** Пусто — шапка показывает название страницы из маршрута. */
   readonly crumbs = this.crumbList.asReadonly();
@@ -26,6 +28,10 @@ export class PageHeader {
   readonly activeTab = this.activeLabel.asReadonly();
   /** Числа рядом с вкладками: сколько накладных ждёт проверки. */
   readonly badges = this.tabBadges.asReadonly();
+  /** Вторая часть крошки у названия страницы, например число товаров. */
+  readonly suffix = this.suffixText.asReadonly();
+  /** Поиск и кнопки справа от крошек. */
+  readonly actions = this.actionTpl.asReadonly();
 
   setCrumbs(crumbs: readonly Breadcrumb[]): void {
     this.crumbList.set(crumbs);
@@ -43,6 +49,14 @@ export class PageHeader {
   /** Счётчики по названию вкладки. Ноль и пусто не показываются. */
   setBadges(badges: Record<string, number>): void {
     this.tabBadges.set(badges);
+  }
+
+  setSuffix(text: string): void {
+    this.suffixText.set(text);
+  }
+
+  setActions(template: TemplateRef<unknown> | null): void {
+    this.actionTpl.set(template);
   }
 
   clear(): void {

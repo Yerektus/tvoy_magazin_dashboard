@@ -5,7 +5,11 @@ import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL } from '../../../shared/services/api-config';
 import { type ExtensionAccount, type ExtensionProvider } from '../../extensions/models/extension';
 import { type ApprovedPurchase, type PurchasePlan } from '../models/plan';
-import { type ProductsSnapshot } from '../models/product';
+import {
+  type ProductsQuery,
+  type ProductsSnapshot,
+  type StoreProductDetail,
+} from '../models/product';
 
 /** Что отвечает бэкенд про подключение расширения. */
 interface Access {
@@ -123,13 +127,30 @@ export class Planning implements ExtensionProvider {
   }
 
   /** Товары из продаж и состояние выгрузки чеков. */
-  async products(): Promise<ProductsSnapshot> {
-    return this.request<ProductsSnapshot>('get', 'products/');
+  async products(query: ProductsQuery = {}): Promise<ProductsSnapshot> {
+    return this.request<ProductsSnapshot>('get', `products/?${productsQuery(query)}`);
+  }
+
+  /** Карточка товара: дневные продажи и прогноз. */
+  async product(
+    barcode: string,
+    horizon = 14,
+    historyDays = 60,
+  ): Promise<StoreProductDetail> {
+    const query = new URLSearchParams({
+      horizon: String(horizon),
+      history_days: String(historyDays),
+    });
+
+    return this.request<StoreProductDetail>(
+      'get',
+      `products/${encodeURIComponent(barcode)}/?${query}`,
+    );
   }
 
   /** Забирает чеки из UMAG. Пока грузится — страница опрашивает `products()`. */
-  async syncProducts(): Promise<ProductsSnapshot> {
-    return this.request<ProductsSnapshot>('post', 'products/', {});
+  async syncProducts(query: ProductsQuery = {}): Promise<ProductsSnapshot> {
+    return this.request<ProductsSnapshot>('post', `products/?${productsQuery(query)}`, {});
   }
 
   private save(access: Access): ExtensionAccount {
@@ -163,6 +184,48 @@ export class Planning implements ExtensionProvider {
       throw new Error(describe(error));
     }
   }
+}
+
+function productsQuery(query: ProductsQuery): string {
+  const params = new URLSearchParams();
+
+  if (query.q) {
+    params.set('q', query.q);
+  }
+
+  if (query.lastFrom) {
+    params.set('last_from', query.lastFrom);
+  }
+
+  if (query.lastTo) {
+    params.set('last_to', query.lastTo);
+  }
+
+  if (query.soldFrom) {
+    params.set('sold_from', query.soldFrom);
+  }
+
+  if (query.soldTo) {
+    params.set('sold_to', query.soldTo);
+  }
+
+  if (query.page) {
+    params.set('page', String(query.page));
+  }
+
+  if (query.pageSize) {
+    params.set('page_size', String(query.pageSize));
+  }
+
+  if (query.sort) {
+    params.set('sort', query.sort);
+  }
+
+  if (query.order) {
+    params.set('order', query.order);
+  }
+
+  return params.toString();
 }
 
 function describe(error: unknown): string {

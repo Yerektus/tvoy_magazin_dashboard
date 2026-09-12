@@ -56,7 +56,7 @@ const STATUS_ICONS: Record<PlanStatus, IconNode> = {
 };
 
 const STATUS_CLASSES: Record<PlanStatus, string> = {
-  building: 'text-sky-600',
+  building: 'text-blue-600',
   ready: 'text-emerald-600',
   failed: 'text-red-600',
 };

@@ -15,7 +15,6 @@ import { Sidebar, SidebarItem } from './components/sidebar/sidebar';
   selector: 'app-main-layout',
   imports: [RouterOutlet, Header, Sidebar, TargetPicker],
   templateUrl: './main-layout.html',
-  host: { '(window:resize)': 'onResize()' },
 })
 export class MainLayout {
   private readonly router = inject(Router);
@@ -59,17 +58,6 @@ export class MainLayout {
 
   // На телефоне сайдбар закрыт: он перекрывает страницу целиком.
   protected readonly sidebarOpen = signal(window.innerWidth >= 1024);
-
-  /**
-   * С `lg` выбор магазина стоит в шапке, ниже — переезжает в сайдбар.
-   * Прячем не стилями, а условием: иначе в разметке жили бы два выбора,
-   * и каждый ходил бы в UMAG за своим списком магазинов.
-   */
-  protected readonly wide = signal(window.innerWidth >= 1024);
-
-  protected onResize(): void {
-    this.wide.set(window.innerWidth >= 1024);
-  }
 
   /** Название открытой страницы — из `title` маршрута. */
   protected readonly pageTitle = toSignal(

@@ -74,7 +74,7 @@
                     </span>
                   }
                   @case ('current') {
-                    <app-icon [icon]="currentIcon" [size]="18" class="text-sky-500" />
+                    <app-icon [icon]="currentIcon" [size]="18" class="text-blue-500" />
                   }
                   @case ('failed') {
                     <app-icon [icon]="failedIcon" [size]="18" class="text-red-600" />
@@ -168,7 +168,7 @@
             />
 
             @if (lineGuessed(line)) {
-              <p class="mt-0.5 border border-transparent text-sky-600">
+              <p class="mt-0.5 border border-transparent text-blue-600">
                 {{ lineGuessNote(line) }}
               </p>
             }
@@ -274,7 +274,7 @@
 
                 @if (document.supplier_bin_auto) {
                   <span
-                    class="rounded-sm bg-sky-50 px-1.5 py-0.5 text-xs whitespace-nowrap text-sky-700"
+                    class="rounded-sm bg-blue-50 px-1.5 py-0.5 text-xs whitespace-nowrap text-blue-700"
                   >
                     подставил ИИ по прошлым накладным
                   </span>
@@ -452,7 +452,7 @@
           <li class="border-b border-neutral-100 last:border-0">
             <button
               type="button"
-              class="w-full cursor-pointer py-2.5 text-left text-sm hover:text-sky-600"
+              class="w-full cursor-pointer py-2.5 text-left text-sm hover:text-blue-600"
               (click)="chooseSupplier(agent)"
             >
               {{ agent.name }}

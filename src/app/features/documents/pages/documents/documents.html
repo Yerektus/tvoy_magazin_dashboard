@@ -7,7 +7,7 @@
       <a
         emptyAction
         routerLink="/settings/recognition"
-        class="mt-4 inline-block text-sm text-sky-600 hover:text-sky-700"
+        class="mt-4 inline-block text-sm text-blue-600 hover:text-blue-700"
       >
         Открыть расширение →
       </a>
@@ -67,7 +67,7 @@
     <ng-template appTableColumn="title" header="Документ" width="w-72" let-document>
       <a
         [routerLink]="['/documents', document.id]"
-        class="block font-normal break-words hover:text-sky-600"
+        class="block font-normal break-words hover:text-blue-600"
       >
         {{ documentTitle(document) }}
       </a>
