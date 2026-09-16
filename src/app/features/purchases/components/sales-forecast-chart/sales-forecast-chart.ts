@@ -9,54 +9,97 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { Chart, ChartConfiguration, ChartData, TooltipItem } from 'chart.js/auto';
+import { Chart, ChartConfiguration, ChartData, Plugin, TooltipItem } from 'chart.js/auto';
 
 import { formatAmount } from '../../models/plan';
 import { type DailySold } from '../../models/product';
+import {
+  AMBER,
+  AMBER_RGB,
+  BLUE,
+  BLUE_RGB,
+  FONT,
+  GRID,
+  MUTED,
+  type Rgb,
+  formatDay,
+  soldOf,
+} from '../chart-theme';
 
-const BLUE = '#2563EB';
-const AMBER = '#D97706';
-const GRID = '#F5F5F5';
-const MUTED = '#A3A3A3';
-const FONT = 'Inter Variable, Inter, system-ui, sans-serif';
+const FACT_LABEL = 'Факт';
 const FORECAST_LABEL = 'Прогноз';
 
+const LINE = {
+  fill: 'origin' as const,
+  tension: 0,
+  pointRadius: 0,
+  pointHoverRadius: 4,
+  pointBorderColor: '#fff',
+  pointBorderWidth: 2,
+  borderWidth: 2,
+};
+
+/** На телефоне день не сжимаем: график шире экрана, его листают. */
+const PX_PER_DAY = 16;
+const MIN_CHART_WIDTH = 480;
+const PX_PER_TICK = 80;
+
 /**
- * График продаж: сплошная линия — факт, пунктир — прогноз.
+ * Линейный график: факт, прогноз или оба ряда — смотря что передали.
  */
 @Component({
   selector: 'app-sales-forecast-chart',
   templateUrl: './sales-forecast-chart.html',
+  host: { class: 'block min-w-0' },
 })
 export class SalesForecastChart {
-  readonly history = input.required<readonly DailySold[]>();
-  readonly forecast = input.required<readonly DailySold[]>();
+  readonly history = input<readonly DailySold[]>([]);
+  readonly forecast = input<readonly DailySold[]>([]);
   readonly measure = input('');
 
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('chart');
   private chart: Chart<'line'> | undefined;
 
-  protected readonly hasSales = computed(() => this.history().some((row) => soldOf(row) > 0));
+  protected readonly factDays = computed(() => this.history());
 
-  protected readonly empty = computed(() => {
-    const historyLen = this.history().length;
-    const forecastLen = this.hasSales() ? this.forecast().length : 0;
+  protected readonly forecastDays = computed(() => {
+    const lastHistory = this.history().at(-1);
 
-    return historyLen + forecastLen < 2;
+    return this.forecast().filter((row) => !lastHistory || row.date > lastHistory.date);
+  });
+
+  protected readonly showsFact = computed(() => this.factDays().length > 0);
+  protected readonly showsForecast = computed(() => this.forecastDays().length > 0);
+
+  protected readonly empty = computed(
+    () => this.factDays().length + this.forecastDays().length < 2,
+  );
+
+  protected readonly chartWidth = computed(() =>
+    Math.max(
+      (this.factDays().length + this.forecastDays().length) * PX_PER_DAY,
+      MIN_CHART_WIDTH,
+    ),
+  );
+
+  protected readonly caption = computed(() => {
+    if (this.showsFact() && this.showsForecast()) {
+      return 'График продаж и прогноза';
+    }
+
+    return this.showsForecast() ? 'График прогноза' : 'График продаж';
   });
 
   protected readonly data = computed<ChartData<'line'>>(() => {
-    const history = this.history();
+    const history = this.factDays();
+    const forecast = this.forecastDays();
     const lastHistory = history.at(-1);
-    const showForecast = this.hasSales();
-    const forecast = showForecast
-      ? this.forecast().filter((row) => !lastHistory || row.date > lastHistory.date)
-      : [];
     const labels = [...history.map((row) => row.date), ...forecast.map((row) => row.date)];
+    const datasets: ChartData<'line'>['datasets'] = [];
 
-    const datasets: ChartData<'line'>['datasets'] = [
-      {
-        label: 'Факт',
+    if (history.length > 0) {
+      datasets.push({
+        label: FACT_LABEL,
         data: [
           ...history.map((row) => {
             const value = soldOf(row);
@@ -66,33 +109,28 @@ export class SalesForecastChart {
           ...forecast.map(() => null),
         ],
         borderColor: BLUE,
-        backgroundColor: 'rgba(59, 130, 246, 0.12)',
-        fill: false,
+        backgroundColor: fillColor(BLUE_RGB),
+        pointBackgroundColor: BLUE,
         spanGaps: true,
-        tension: 0.25,
-        pointRadius: 2,
-        pointHoverRadius: 4,
-        borderWidth: 2,
-      },
-    ];
+        ...LINE,
+      });
+    }
 
-    if (showForecast && forecast.length > 0) {
+    if (forecast.length > 0) {
       datasets.push({
         label: FORECAST_LABEL,
-        data: [
-          ...history.slice(0, -1).map(() => null),
-          ...(lastHistory ? [soldOf(lastHistory)] : []),
-          ...forecast.map((row) => soldOf(row)),
-        ],
-        borderColor: AMBER,
-        backgroundColor: 'transparent',
-        fill: false,
+        data: history.length
+          ? [
+              ...history.slice(0, -1).map(() => null),
+              ...(lastHistory ? [soldOf(lastHistory)] : []),
+              ...forecast.map((row) => soldOf(row)),
+            ]
+          : forecast.map((row) => soldOf(row)),
+        borderColor: history.length ? AMBER : BLUE,
+        backgroundColor: fillColor(history.length ? AMBER_RGB : BLUE_RGB),
+        pointBackgroundColor: history.length ? AMBER : BLUE,
         spanGaps: false,
-        tension: 0.25,
-        pointRadius: 2,
-        pointHoverRadius: 4,
-        borderWidth: 2,
-        borderDash: [6, 4],
+        ...LINE,
       });
     }
 
@@ -115,23 +153,40 @@ export class SalesForecastChart {
   private readonly chartOptions = computed<ChartConfiguration<'line'>['options']>(() => {
     const unit = this.measure();
     const labels = this.data().labels ?? [];
+    const historyLen = this.factDays().length;
 
     return {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
       interaction: { mode: 'index', intersect: false },
+      layout: { padding: { top: 8, right: 8 } },
+      elements: {
+        line: { borderJoinStyle: 'round', borderCapStyle: 'round' },
+        point: { hitRadius: 10 },
+      },
       plugins: {
         legend: { display: false },
+        filler: { propagate: false },
         tooltip: {
           filter: (item) => {
-            if (item.dataset.label !== FORECAST_LABEL) {
-              return true;
-            }
-
             const value = item.parsed.y;
 
-            return value !== null && value !== undefined && Number(value) > 0;
+            if (value === null || value === undefined) {
+              return false;
+            }
+
+            // Точка стыка линий — это факт последнего дня, а не прогноз:
+            // иначе подсказка на истории врёт «Прогноз: столько же».
+            if (item.dataset.label === FORECAST_LABEL && item.dataIndex < historyLen) {
+              return false;
+            }
+
+            if (item.dataset.label === FORECAST_LABEL && Number(value) <= 0) {
+              return false;
+            }
+
+            return true;
           },
           callbacks: {
             title: (items) => (items[0] ? formatDay(String(items[0].label)) : ''),
@@ -147,6 +202,7 @@ export class SalesForecastChart {
       scales: {
         x: {
           type: 'category',
+          offset: false,
           grid: { display: false },
           border: { display: false },
           ticks: {
@@ -154,7 +210,7 @@ export class SalesForecastChart {
             font: { family: FONT, size: 11 },
             maxRotation: 0,
             autoSkip: true,
-            maxTicksLimit: 6,
+            maxTicksLimit: Math.max(4, Math.round(this.chartWidth() / PX_PER_TICK)),
             callback: (value) => formatDay(String(labels[Number(value)] ?? value)),
           },
         },
@@ -162,7 +218,7 @@ export class SalesForecastChart {
           type: 'linear',
           beginAtZero: true,
           border: { display: false },
-          grid: { color: GRID },
+          grid: { color: GRID, drawTicks: false },
           ticks: {
             color: MUTED,
             font: { family: FONT, size: 11 },
@@ -193,22 +249,53 @@ export class SalesForecastChart {
       return;
     }
 
-    this.chart = new Chart(canvas, { type: 'line', data, options });
+    this.chart = new Chart(canvas, {
+      type: 'line',
+      data,
+      options,
+      plugins: [areaFillPlugin],
+    });
+    this.chart.update('none');
   }
 }
 
-function soldOf(row: DailySold): number {
-  const value = Number.parseFloat(String(row.sold ?? '').replace(',', '.'));
+function fillColor(rgb: Rgb): string {
+  const [r, g, b] = rgb;
 
-  return Number.isFinite(value) ? value : 0;
+  return `rgba(${r}, ${g}, ${b}, 0.12)`;
 }
 
-function formatDay(value: string): string {
-  const date = new Date(`${value.slice(0, 10)}T12:00:00`);
+function makeGradient(
+  ctx: CanvasRenderingContext2D,
+  area: { top: number; bottom: number },
+  rgb: Rgb,
+): CanvasGradient {
+  const [r, g, b] = rgb;
+  const gradient = ctx.createLinearGradient(0, area.top, 0, area.bottom);
 
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
+  gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.32)`);
+  gradient.addColorStop(0.55, `rgba(${r}, ${g}, ${b}, 0.1)`);
+  gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
 
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  return gradient;
 }
+
+const areaFillPlugin: Plugin<'line'> = {
+  id: 'salesAreaFill',
+  afterLayout(chart) {
+    const area = chart.chartArea;
+
+    if (!area) {
+      return;
+    }
+
+    for (const dataset of chart.data.datasets) {
+      const rgb =
+        dataset.label === FORECAST_LABEL && chart.data.datasets.length > 1
+          ? AMBER_RGB
+          : BLUE_RGB;
+
+      dataset.backgroundColor = makeGradient(chart.ctx, area, rgb);
+    }
+  },
+};

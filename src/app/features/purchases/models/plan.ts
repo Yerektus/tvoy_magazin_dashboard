@@ -126,7 +126,7 @@ export const isBuilding = (plan: PurchasePlan | null): boolean => plan?.status =
  * крупные числа показываем целыми, мелкие — с одним знаком, а меньше
  * единицы — с двумя, иначе от 0,25 кг ничего не останется.
  */
-export function formatAmount(value: string | null): string {
+export function formatAmount(value: string | number | null): string {
   if (value === null || value === '') {
     return '—';
   }
@@ -134,7 +134,7 @@ export function formatAmount(value: string | null): string {
   const number = Number(value);
 
   if (Number.isNaN(number)) {
-    return value;
+    return String(value);
   }
 
   const size = Math.abs(number);

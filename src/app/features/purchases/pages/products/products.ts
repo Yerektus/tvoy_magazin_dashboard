@@ -44,7 +44,7 @@ const PAGE_SIZE = 50;
 /** Поиск не бьёт API на каждую букву. */
 const SEARCH_DELAY = 300;
 
-type SortColumn = 'name' | 'sold' | 'last';
+type SortColumn = 'name' | 'barcode' | 'sold' | 'last';
 type SortDirection = 'asc' | 'desc';
 
 /**
@@ -82,6 +82,7 @@ export class Products {
   protected readonly status = signal<SalesSyncStatus>('idle');
   protected readonly error = signal('');
   protected readonly query = signal('');
+  protected readonly barcodeQuery = signal('');
   protected readonly lastFrom = signal('');
   protected readonly lastTo = signal('');
   protected readonly soldFrom = signal('');
@@ -128,6 +129,7 @@ export class Products {
   protected readonly filtering = computed(
     () =>
       this.query().trim().length > 0 ||
+      this.barcodeQuery().trim().length > 0 ||
       this.lastFrom().length > 0 ||
       this.lastTo().length > 0 ||
       this.soldFrom().length > 0 ||
@@ -175,6 +177,11 @@ export class Products {
     this.scheduleRefresh();
   }
 
+  protected searchBarcode(event: Event): void {
+    this.barcodeQuery.set((event.target as HTMLInputElement).value);
+    this.scheduleRefresh();
+  }
+
   protected filterLastRange(range: DateRangeValue): void {
     this.lastFrom.set(range.from);
     this.lastTo.set(range.to);
@@ -193,7 +200,7 @@ export class Products {
         ? this.sortDirection() === 'asc'
           ? 'desc'
           : 'asc'
-        : column === 'name'
+        : column === 'name' || column === 'barcode'
           ? 'asc'
           : 'desc';
 
@@ -269,6 +276,7 @@ export class Products {
     this.loading.set(true);
     this.apply(emptyProducts());
     this.query.set('');
+    this.barcodeQuery.set('');
     this.lastFrom.set('');
     this.lastTo.set('');
     this.soldFrom.set('');
@@ -386,6 +394,7 @@ export class Products {
 
     return {
       q: overrides.q ?? this.query().trim(),
+      barcode: overrides.barcode ?? this.barcodeQuery().trim(),
       page: overrides.page ?? this.page(),
       pageSize: PAGE_SIZE,
       sort: overrides.sort ?? this.sortColumn(),

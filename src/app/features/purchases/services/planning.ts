@@ -131,16 +131,23 @@ export class Planning implements ExtensionProvider {
     return this.request<ProductsSnapshot>('get', `products/?${productsQuery(query)}`);
   }
 
-  /** Карточка товара: дневные продажи и прогноз. */
+  /** Карточка товара: дневные продажи. Прогноз — только если его запросили. */
   async product(
     barcode: string,
     horizon = 14,
     historyDays = 60,
+    model?: string,
+    forecast = true,
   ): Promise<StoreProductDetail> {
     const query = new URLSearchParams({
       horizon: String(horizon),
       history_days: String(historyDays),
+      forecast: forecast ? 'true' : 'false',
     });
+
+    if (model) {
+      query.set('model', model);
+    }
 
     return this.request<StoreProductDetail>(
       'get',
@@ -191,6 +198,10 @@ function productsQuery(query: ProductsQuery): string {
 
   if (query.q) {
     params.set('q', query.q);
+  }
+
+  if (query.barcode) {
+    params.set('barcode', query.barcode);
   }
 
   if (query.lastFrom) {

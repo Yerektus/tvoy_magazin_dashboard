@@ -1,15 +1,29 @@
 <div class="px-4 sm:px-6">
   <div class="flex h-14 items-center justify-between gap-3">
     <span class="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
-      <app-button
-        variant="ghost"
-        [icon]="true"
-        [ariaLabel]="menuLabel()"
-        [ariaExpanded]="sidebarOpen()"
-        (click)="toggleSidebar.emit()"
-      >
-        <app-icon [icon]="menuIcon()" [size]="18" />
-      </app-button>
+      <span class="lg:hidden">
+        <app-button
+          variant="secondary"
+          size="lg"
+          [icon]="true"
+          [ariaLabel]="menuLabel()"
+          [ariaExpanded]="sidebarOpen()"
+          (click)="toggleSidebar.emit()"
+        >
+          <app-icon [icon]="menuIcon()" />
+        </app-button>
+      </span>
+      <span class="hidden lg:contents">
+        <app-button
+          variant="ghost"
+          [icon]="true"
+          [ariaLabel]="menuLabel()"
+          [ariaExpanded]="sidebarOpen()"
+          (click)="toggleSidebar.emit()"
+        >
+          <app-icon [icon]="menuIcon()" [size]="18" />
+        </app-button>
+      </span>
 
       @if (page.crumbs().length) {
         <app-breadcrumbs [items]="page.crumbs()" />

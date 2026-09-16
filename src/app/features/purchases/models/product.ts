@@ -29,6 +29,7 @@ export interface ProductForecast {
 
 /** Карточка товара: продажи и прогноз. */
 export interface StoreProductDetail extends StoreProduct {
+  supplier: string;
   horizon: number;
   history_days: number;
   history: DailySold[];
@@ -50,9 +51,10 @@ export interface ProductsSnapshot {
 /** Что спрашиваем у списка: поиск, сортировка и страница. */
 export interface ProductsQuery {
   q?: string;
+  barcode?: string;
   page?: number;
   pageSize?: number;
-  sort?: 'name' | 'sold' | 'last';
+  sort?: 'name' | 'barcode' | 'sold' | 'last';
   order?: 'asc' | 'desc';
   lastFrom?: string;
   lastTo?: string;
@@ -73,12 +75,25 @@ export const emptyProducts = (): ProductsSnapshot => ({
 
 const MODEL_LABELS: Record<string, string> = {
   average: 'Среднее',
-  weighted_average: 'Взвешенное среднее',
+  weighted_average: 'Сглаживание',
   holt: 'Хольт',
   holt_winters_weekly: 'Хольт–Винтерс',
+  auto_ets: 'ETS (авто)',
+  auto_theta: 'Theta (авто)',
   croston_sba: 'Кростон',
   seasonal_naive_year: 'Сезонный (год)',
 };
+
+export const FORECAST_MODEL_IDS = [
+  'average',
+  'weighted_average',
+  'holt',
+  'holt_winters_weekly',
+  'auto_ets',
+  'auto_theta',
+  'croston_sba',
+  'seasonal_naive_year',
+] as const;
 
 /** Как назвать модель прогноза в карточке. */
 export function forecastModelLabel(model: string): string {

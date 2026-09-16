@@ -1,9 +1,6 @@
 <div>
-  <p class="flex items-center gap-1.5 font-medium text-xs text-neutral-400">
-    <app-icon [icon]="icon()" [size]="14" />
-    {{ label() }}
-  </p>
-  <div class="mt-1 text-lg text-neutral-900">
+  <p class="text-md text-neutral-500">{{ label() }}</p>
+  <div class="mt-1 text-md font-medium text-neutral-900">
     <ng-content />
   </div>
 </div>
