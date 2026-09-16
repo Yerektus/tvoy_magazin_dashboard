@@ -57,6 +57,11 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'sales',
+        title: 'Аналитика продаж',
+        loadComponent: () => import('./features/purchases/pages/sales/sales').then((m) => m.Sales),
+      },
+      {
         path: 'purchases',
         title: 'Планирование закупов',
         loadComponent: () =>

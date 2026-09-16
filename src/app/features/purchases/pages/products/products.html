@@ -255,9 +255,9 @@
     </ng-template>
   </app-table>
 
-  <nav class="mt-4 flex items-center gap-1" aria-label="Страницы">
+  <nav class="mt-4 flex items-center gap-2" aria-label="Страницы">
     <app-button
-      variant="ghost"
+      variant="secondary"
       [icon]="true"
       [disabled]="pending() || shownPage() <= 1"
       ariaLabel="Предыдущая страница"
@@ -267,7 +267,7 @@
     </app-button>
 
     <app-button
-      variant="ghost"
+      variant="secondary"
       [icon]="true"
       [disabled]="pending() || shownPage() >= pageCount()"
       ariaLabel="Следующая страница"

@@ -33,6 +33,7 @@ export class MainLayout {
     ...(this.planning.connected()
       ? [
           { label: 'Товары', route: '/products' },
+          { label: 'Аналитика продаж', route: '/sales' },
           { label: 'Планирование закупов', route: '/purchases' },
         ]
       : []),

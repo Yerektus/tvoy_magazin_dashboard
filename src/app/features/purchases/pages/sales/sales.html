@@ -1,0 +1,197 @@
+<ng-template #headerActions>
+  @if (connected() && !loading()) {
+    <span class="sm:hidden">
+      <app-button
+        variant="primary"
+        size="lg"
+        [icon]="true"
+        [disabled]="syncing()"
+        ariaLabel="Обновить"
+        (click)="sync()"
+      >
+        @if (syncing()) {
+          <app-spinner />
+        } @else {
+          <app-icon [icon]="syncIcon" />
+        }
+      </app-button>
+    </span>
+    <span class="hidden sm:contents">
+      <app-button variant="primary" [disabled]="syncing()" (click)="sync()">
+        <span class="flex items-center gap-2">
+          @if (syncing()) {
+            <app-spinner />
+          } @else {
+            <app-icon [icon]="syncIcon" />
+          }
+          Обновить
+        </span>
+      </app-button>
+    </span>
+  }
+</ng-template>
+
+@if (loading()) {
+  <div class="flex min-h-[70vh] items-center justify-center text-neutral-400">
+    <app-spinner [size]="24" />
+  </div>
+} @else if (!connected()) {
+  <app-empty title="Расширение не подключено">
+    Аналитика считается по продажам UMAG. Подключите планирование закупов на странице расширения.
+
+    <a
+      emptyAction
+      routerLink="/settings/planning"
+      class="mt-4 inline-block text-sm text-blue-600 hover:text-blue-700"
+    >
+      Открыть расширение →
+    </a>
+  </app-empty>
+} @else if (syncing() && !hasSales()) {
+  <div class="flex min-h-[70vh] flex-col items-center justify-center text-neutral-400">
+    <app-spinner [size]="24" />
+    <p class="mt-4 text-center text-sm text-neutral-500">Загружаем продажи из UMAG</p>
+  </div>
+} @else if (!hasSales()) {
+  <app-empty [title]="failed() ? 'Не удалось загрузить продажи' : 'Продаж пока нет'">
+    {{
+      failed()
+        ? error() || 'Попробуйте синхронизировать ещё раз.'
+        : 'Синхронизируйте продажи из UMAG — по ним появится сводка магазина.'
+    }}
+
+    <div emptyAction class="mt-4">
+      <app-button variant="primary" [disabled]="syncing()" (click)="sync()">
+        <span class="flex items-center justify-center gap-2">
+          @if (syncing()) {
+            <app-spinner />
+          } @else {
+            <app-icon [icon]="syncIcon" />
+          }
+          Синхронизировать
+        </span>
+      </app-button>
+    </div>
+  </app-empty>
+} @else {
+  @if (failed() && error()) {
+    <p class="mb-4 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {{ error() }}
+    </p>
+  }
+
+  <div class="flex flex-col gap-4" [class.opacity-50]="pending()">
+    <section class="rounded-md border border-neutral-200 bg-white">
+      <div
+        class="flex flex-col gap-3 border-b border-neutral-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+      >
+        <h2 class="text-base font-medium text-neutral-900">Итоги</h2>
+        <app-select
+          class="w-40"
+          [options]="periods"
+          [value]="days()"
+          ariaLabel="Период"
+          (selected)="setDays($event)"
+        />
+      </div>
+
+      <div class="p-4 sm:p-5">
+        <div class="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:gap-x-12">
+          <app-stat-card label="Товаров">
+            {{ snapshot().sku_count.toLocaleString('ru-RU') }}
+          </app-stat-card>
+
+          <app-stat-card label="Дней с продажами">
+            {{ snapshot().active_days }} из {{ snapshot().days }}
+          </app-stat-card>
+
+          <app-stat-card label="Со скидкой">
+            @if (snapshot().promo_share === null) {
+              <span class="text-neutral-400">—</span>
+            } @else {
+              {{ formatShare(snapshot().promo_share) }}
+            }
+          </app-stat-card>
+
+          <app-stat-card label="К прошлому периоду">
+            @if (snapshot().trend === null) {
+              <span class="text-neutral-400">—</span>
+            } @else {
+              {{ formatChange(snapshot().trend) }}
+            }
+          </app-stat-card>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-md border border-neutral-200 bg-white">
+      <div class="border-b border-neutral-200 px-4 py-3 sm:px-5">
+        <h2 class="text-base font-medium text-neutral-900">Продажи по дням</h2>
+      </div>
+
+      <div class="p-4 sm:p-5">
+        <app-sales-forecast-chart [history]="snapshot().history" />
+      </div>
+    </section>
+
+    <div class="grid gap-4 lg:grid-cols-2">
+      <section class="rounded-md border border-neutral-200 bg-white">
+        <div class="border-b border-neutral-200 px-4 py-3 sm:px-5">
+          <h2 class="text-base font-medium text-neutral-900">По дням недели</h2>
+        </div>
+
+        <div class="flex flex-col gap-2 p-4 sm:p-5">
+          @for (row of snapshot().weekdays; track row.weekday) {
+            <div class="flex items-center gap-3">
+              <span class="w-8 shrink-0 text-sm text-neutral-500">{{
+                weekdayLabel(row.weekday)
+              }}</span>
+              <div class="h-8 min-w-0 flex-1 overflow-hidden rounded-md bg-neutral-100">
+                @if (share(row.sold, weekdayMax()) > 0) {
+                  <div
+                    class="h-full rounded-md bg-[#C5DFD9]"
+                    [style.width.%]="share(row.sold, weekdayMax())"
+                  ></div>
+                }
+              </div>
+              <span class="w-16 shrink-0 text-right text-sm text-neutral-800">
+                {{ formatAmount(row.sold) }}
+              </span>
+            </div>
+          }
+        </div>
+      </section>
+
+      @if (snapshot().categories.length) {
+        <section class="rounded-md border border-neutral-200 bg-white">
+          <div class="border-b border-neutral-200 px-4 py-3 sm:px-5">
+            <h2 class="text-base font-medium text-neutral-900">Категории</h2>
+          </div>
+
+          <div class="flex flex-col gap-2 p-4 sm:p-5">
+            @for (row of snapshot().categories; track row.name) {
+              <div class="flex items-center gap-3">
+                <div class="min-w-0 flex-1">
+                  <div class="mb-1 flex items-baseline justify-between gap-2">
+                    <span class="truncate text-sm text-neutral-800">{{ row.name }}</span>
+                    <span class="shrink-0 text-sm text-neutral-800">
+                      {{ formatAmount(row.sold) }}
+                    </span>
+                  </div>
+                  <div class="h-8 overflow-hidden rounded-md bg-neutral-100">
+                    @if (share(row.sold, categoryMax()) > 0) {
+                      <div
+                        class="h-full rounded-md bg-[#C5DFD9]"
+                        [style.width.%]="share(row.sold, categoryMax())"
+                      ></div>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  </div>
+}

@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { API_BASE_URL } from '../../../shared/services/api-config';
 import { type ExtensionAccount, type ExtensionProvider } from '../../extensions/models/extension';
+import { type SalesAnalytics } from '../models/analytics';
 import { type ApprovedPurchase, type PurchasePlan } from '../models/plan';
 import {
   type ProductsQuery,
@@ -74,12 +75,7 @@ export class Planning implements ExtensionProvider {
   }
 
   /** Ставит пересчёт: бэкенд считает в фоне, страница опрашивает статус. */
-  async rebuild(
-    days: number,
-    horizon: number,
-    name = '',
-    useStock = true,
-  ): Promise<PurchasePlan> {
+  async rebuild(days: number, horizon: number, name = '', useStock = true): Promise<PurchasePlan> {
     return this.request<PurchasePlan>('post', 'plan/', {
       days,
       horizon,
@@ -89,12 +85,7 @@ export class Planning implements ExtensionProvider {
   }
 
   /** Считает ту же планировку заново: имя остаётся, строки пересобираются. */
-  async recount(
-    id: number,
-    days: number,
-    horizon: number,
-    useStock = true,
-  ): Promise<PurchasePlan> {
+  async recount(id: number, days: number, horizon: number, useStock = true): Promise<PurchasePlan> {
     return this.request<PurchasePlan>('post', `plans/${id}/`, {
       days,
       horizon,
@@ -153,6 +144,11 @@ export class Planning implements ExtensionProvider {
       'get',
       `products/${encodeURIComponent(barcode)}/?${query}`,
     );
+  }
+
+  /** Сводка продаж выбранного магазина за окно дней. */
+  async analytics(days = 30): Promise<SalesAnalytics> {
+    return this.request<SalesAnalytics>('get', `analytics/?days=${days}`);
   }
 
   /** Забирает чеки из UMAG. Пока грузится — страница опрашивает `products()`. */

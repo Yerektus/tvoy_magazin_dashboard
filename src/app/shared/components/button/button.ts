@@ -21,7 +21,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
 
 /** Квадратная кнопка под одну иконку — без горизонтальных полей. */
 const ICON_SHAPE: Record<ButtonSize, string> = {
-  md: 'inline-flex items-center justify-center p-1',
+  md: 'inline-flex size-8 items-center justify-center',
   lg: 'inline-flex size-10 items-center justify-center',
 };
 const TEXT_SHAPE = 'inline-flex h-8 items-center justify-center px-4';
