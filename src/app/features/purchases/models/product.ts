@@ -78,23 +78,29 @@ export const emptyProducts = (): ProductsSnapshot => ({
 const MODEL_LABELS: Record<string, string> = {
   average: 'Среднее',
   weighted_average: 'Сглаживание',
+  weekly_average: 'Среднее по дням недели',
   holt: 'Хольт',
   holt_winters_weekly: 'Хольт–Винтерс',
   auto_ets: 'ETS (авто)',
   auto_theta: 'Theta (авто)',
   croston_sba: 'Кростон',
+  seasonal_naive_week: 'Сезонный (неделя)',
   seasonal_naive_year: 'Сезонный (год)',
+  pooled_weekly: 'С опорой на магазин',
 };
 
 export const FORECAST_MODEL_IDS = [
   'average',
   'weighted_average',
+  'weekly_average',
   'holt',
   'holt_winters_weekly',
   'auto_ets',
   'auto_theta',
   'croston_sba',
+  'seasonal_naive_week',
   'seasonal_naive_year',
+  'pooled_weekly',
 ] as const;
 
 /** Как назвать модель прогноза в карточке. */
