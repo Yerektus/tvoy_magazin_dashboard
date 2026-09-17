@@ -216,6 +216,10 @@ function productsQuery(query: ProductsQuery): string {
     params.set('sold_to', query.soldTo);
   }
 
+  if (query.accuracy) {
+    params.set('accuracy', query.accuracy);
+  }
+
   if (query.page) {
     params.set('page', String(query.page));
   }

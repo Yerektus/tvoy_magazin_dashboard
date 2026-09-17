@@ -1,4 +1,4 @@
-import { CircleCheck, type IconNode, RefreshCw, TriangleAlert } from 'lucide';
+import { CircleCheck, CircleX, Clock, Info, type IconNode, RefreshCw, TriangleAlert } from 'lucide';
 
 export type PlanStatus = 'building' | 'ready' | 'failed';
 
@@ -19,6 +19,8 @@ export interface PurchasePlanItem {
   suggested: string;
   price: string | null;
   cost: string | null;
+  /** Ошибка прогноза: доля 0–1. Пусто — модели не на чем учиться. */
+  forecast_error: string | null;
 }
 
 export interface PurchasePlan {
@@ -66,6 +68,79 @@ export const statusLabel = (status: PlanStatus): string => STATUS_LABELS[status]
 export const statusIcon = (status: PlanStatus): IconNode => STATUS_ICONS[status];
 
 export const statusClasses = (status: PlanStatus): string => STATUS_CLASSES[status];
+
+/** Ошибка прогноза: ниже — точнее. Как на карточке товара. */
+const GOOD_ERROR = 0.25;
+const FAIR_ERROR = 0.5;
+
+export type AccuracyLevel = 'high' | 'medium' | 'low' | 'none';
+
+const ACCURACY_LABELS: Record<AccuracyLevel, string> = {
+  high: 'Высокая',
+  medium: 'Средняя',
+  low: 'Низкая',
+  none: 'Нет данных',
+};
+
+const ACCURACY_ICONS: Record<AccuracyLevel, IconNode> = {
+  high: CircleCheck,
+  medium: Info,
+  low: Clock,
+  none: CircleX,
+};
+
+const ACCURACY_CLASSES: Record<AccuracyLevel, string> = {
+  high: 'text-emerald-600',
+  medium: 'text-blue-600',
+  low: 'text-amber-600',
+  none: 'text-red-600',
+};
+
+export function accuracyLevel(value: string | null | undefined): AccuracyLevel {
+  const error = Number(value ?? NaN);
+
+  if (Number.isNaN(error)) {
+    return 'none';
+  }
+
+  if (error <= GOOD_ERROR) {
+    return 'high';
+  }
+
+  if (error <= FAIR_ERROR) {
+    return 'medium';
+  }
+
+  return 'low';
+}
+
+export const accuracyLabel = (value: string | null | undefined): string =>
+  ACCURACY_LABELS[accuracyLevel(value)];
+
+export const accuracyIcon = (value: string | null | undefined): IconNode =>
+  ACCURACY_ICONS[accuracyLevel(value)];
+
+export const accuracyClasses = (value: string | null | undefined): string =>
+  ACCURACY_CLASSES[accuracyLevel(value)];
+
+/** Пункты фильтра точности: «Все» и четыре уровня, как в колонке. */
+export const ACCURACY_FILTER_OPTIONS: { value: AccuracyLevel | ''; label: string }[] = [
+  { value: '', label: 'Все' },
+  { value: 'high', label: ACCURACY_LABELS.high },
+  { value: 'medium', label: ACCURACY_LABELS.medium },
+  { value: 'low', label: ACCURACY_LABELS.low },
+  { value: 'none', label: ACCURACY_LABELS.none },
+];
+
+export function formatError(value: string | null | undefined): string {
+  const error = Number(value ?? NaN);
+
+  if (Number.isNaN(error)) {
+    return '—';
+  }
+
+  return `${(error * 100).toLocaleString('ru-RU', { maximumFractionDigits: 0 })}%`;
+}
 
 /** Заголовок планировки: своё имя или горизонт, если имя не задали. */
 export function planTitle(plan: Pick<PurchasePlan, 'name' | 'horizon'>): string {
@@ -200,6 +275,7 @@ export interface ApprovedPurchaseItem {
   suggested: string;
   price: string | null;
   cost: string | null;
+  forecast_error: string | null;
 }
 
 export interface ApprovedPurchase {

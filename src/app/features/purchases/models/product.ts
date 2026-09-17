@@ -7,6 +7,7 @@ export interface StoreProduct {
   measure: string;
   sold: string;
   last_sold: string | null;
+  forecast_error: string | null;
 }
 
 /** День на графике: сколько ушло с полки. */
@@ -54,12 +55,13 @@ export interface ProductsQuery {
   barcode?: string;
   page?: number;
   pageSize?: number;
-  sort?: 'name' | 'barcode' | 'sold' | 'last';
+  sort?: 'name' | 'barcode' | 'sold' | 'last' | 'accuracy';
   order?: 'asc' | 'desc';
   lastFrom?: string;
   lastTo?: string;
   soldFrom?: string;
   soldTo?: string;
+  accuracy?: 'high' | 'medium' | 'low' | 'none' | '';
 }
 
 export const emptyProducts = (): ProductsSnapshot => ({

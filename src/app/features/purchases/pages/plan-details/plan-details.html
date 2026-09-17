@@ -43,31 +43,11 @@
   </app-empty>
 } @else if (plan(); as current) {
   <app-toolbar class="mb-4">
-    @if (groups().length) {
-      <p class="text-sm text-neutral-500">
-        Поставщиков: <span class="text-black">{{ groups().length }}</span>
-      </p>
-    }
+    <p class="text-sm text-neutral-500">
+      Всего: <span class="text-black">{{ total().toLocaleString('ru-RU') }}</span>
+    </p>
 
     <div toolbarActions class="flex items-center gap-1">
-      @if (groups().length) {
-        <app-menu [customTrigger]="true" ariaLabel="Порядок поставщиков">
-          <app-button appMenuTrigger variant="ghost" [icon]="true" ariaLabel="Порядок поставщиков">
-            <app-icon [icon]="sortIcon" [size]="18" />
-          </app-button>
-
-          @for (item of sorts; track item.value) {
-            <button appMenuItem (click)="setSort(item.value)">
-              {{ item.label }}
-
-              @if (sort() === item.value) {
-                <app-icon [icon]="chosenIcon" [size]="14" class="ml-auto text-blue-600" />
-              }
-            </button>
-          }
-        </app-menu>
-      }
-
       <div class="relative" #filter>
         <app-button
           variant="ghost"
@@ -84,7 +64,7 @@
             class="animate-fade-in absolute right-0 z-20 mt-1 w-64 rounded-sm border border-neutral-200 bg-white p-3 shadow-lg motion-reduce:animate-none"
           >
             <app-select
-              class="w-full mb-2"
+              class="mb-2 w-full"
               [options]="periods"
               [value]="days()"
               ariaLabel="Период анализа"
@@ -139,103 +119,368 @@
     </div>
   </app-toolbar>
 
-  @if (!groups().length && !building()) {
-    <p class="mt-6 text-sm text-neutral-500">Всего хватает — заказывать нечего</p>
-  }
-
-  @for (group of groups(); track group.supplier) {
-    <div class="border-b border-neutral-100">
-      <div class="flex w-full items-center gap-3 px-3 py-3 transition hover:bg-neutral-100">
-        <button
-          type="button"
-          class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left select-none"
-          [attr.aria-expanded]="opened().has(group.supplier)"
-          (click)="toggle(group.supplier)"
-        >
-          <app-icon
-            [icon]="openIcon"
-            [size]="16"
-            class="shrink-0 text-neutral-400 transition-transform duration-200 motion-reduce:transition-none"
-            [class.rotate-90]="opened().has(group.supplier)"
-          />
-
-          <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ group.supplier }}</span>
-        </button>
-
-        @if (current.status === 'ready') {
-          <app-button
-            variant="ghost"
-            [loading]="approving() === group.supplier"
-            [disabled]="!!approving() || busy() || building()"
-            (click)="approve(group)"
-          >
-            <span class="flex items-center gap-1.5 text-emerald-700">
-              <app-icon [icon]="approveIcon" [size]="16" />
-              Одобрить
-            </span>
-          </app-button>
+  <app-table
+    class="block"
+    minWidth="min-w-[80rem]"
+    maxHeight="h-[calc(100dvh-14rem)] max-h-[calc(100dvh-14rem)]"
+    [rows]="shownItems()"
+    [trackKey]="trackItem"
+    [clickable]="true"
+    [empty]="emptyText()"
+    (rowClick)="openItem($event)"
+  >
+    <ng-template #nameHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('name')"
+        [attr.aria-sort]="
+          isSorted('name') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('name')"
+      >
+        Товар
+        @if (sortIcon('name'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
         }
-      </div>
+      </button>
+    </ng-template>
 
-      @if (visible().has(group.supplier)) {
-        <div
-          class="grid grid-rows-[1fr] motion-reduce:animate-none"
-          [class]="opened().has(group.supplier) ? 'animate-accordion-in' : 'animate-accordion-out'"
-        >
-          <div class="overflow-hidden">
-            <app-table
-              class="block pb-4"
-              minWidth="min-w-[56rem]"
-              [rows]="group.items"
-              [trackKey]="trackItem"
-            >
-              <ng-template appTableColumn="name" header="Товар" width="w-60" let-item>
-                <p class="break-words">{{ item.name }}</p>
-                <p class="mt-0.5 text-neutral-400">{{ item.barcode || 'без штрихкода' }}</p>
-              </ng-template>
+    <ng-template #nameFilter>
+      <input
+        type="search"
+        class="h-8 w-full rounded-md border border-neutral-200 bg-white px-2 text-sm outline-none placeholder:text-neutral-400 hover:border-blue-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+        placeholder="Название"
+        autocomplete="off"
+        [value]="query()"
+        (input)="search($event)"
+        (click)="$event.stopPropagation()"
+      />
+    </ng-template>
 
-              <ng-template appTableColumn="stock" header="Остаток" width="w-28" let-item>
-                <p [class]="isOut(item) ? 'text-red-600' : ''">
-                  {{ formatAmount(item.stock) }} {{ item.measure }}
-                </p>
-                <p class="mt-0.5 text-neutral-400">{{ formatAmount(item.per_day) }} в день</p>
-              </ng-template>
+    <ng-template #barcodeHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('barcode')"
+        [attr.aria-sort]="
+          isSorted('barcode') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('barcode')"
+      >
+        Штрихкод
+        @if (sortIcon('barcode'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
 
-              <ng-template appTableColumn="cover" header="Хватит на" width="w-32" let-item>
-                <span
-                  class="flex items-center gap-2 whitespace-nowrap"
-                  [class]="isOut(item) ? 'text-red-600' : 'text-amber-600'"
-                >
-                  <app-icon [icon]="isOut(item) ? outIcon : lowIcon" />
-                  {{ formatCover(item.cover_days) }}
-                </span>
-              </ng-template>
+    <ng-template #barcodeFilter>
+      <input
+        type="search"
+        class="h-8 w-full rounded-md border border-neutral-200 bg-white px-2 text-sm outline-none placeholder:text-neutral-400 hover:border-blue-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+        placeholder="Штрихкод"
+        autocomplete="off"
+        inputmode="numeric"
+        [value]="barcodeQuery()"
+        (input)="searchBarcode($event)"
+        (click)="$event.stopPropagation()"
+      />
+    </ng-template>
 
-              <ng-template
-                appTableColumn="suggested"
-                header="Заказать"
-                width="w-28"
-                align="right"
-                let-item
-              >
-                <span class="font-medium"
-                  >{{ formatAmount(item.suggested) }} {{ item.measure }}</span
-                >
-              </ng-template>
+    <ng-template #supplierHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('supplier')"
+        [attr.aria-sort]="
+          isSorted('supplier') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('supplier')"
+      >
+        Поставщик
+        @if (sortIcon('supplier'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
 
-              <ng-template
-                appTableColumn="cost"
-                header="На сумму"
-                width="w-32"
-                align="right"
-                let-item
-              >
-                <span class="text-neutral-500">{{ formatMoney(item.cost) }}</span>
-              </ng-template>
-            </app-table>
-          </div>
-        </div>
+    <ng-template #supplierFilter>
+      <input
+        type="search"
+        class="h-8 w-full rounded-md border border-neutral-200 bg-white px-2 text-sm outline-none placeholder:text-neutral-400 hover:border-blue-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+        placeholder="Поставщик"
+        autocomplete="off"
+        [value]="supplierQuery()"
+        (input)="searchSupplier($event)"
+        (click)="$event.stopPropagation()"
+      />
+    </ng-template>
+
+    <ng-template #accuracyHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('accuracy')"
+        [attr.aria-sort]="
+          isSorted('accuracy') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('accuracy')"
+      >
+        Точность
+        @if (sortIcon('accuracy'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #accuracyFilterTpl>
+      <app-select
+        compact
+        placeholder="Все"
+        ariaLabel="Точность прогноза"
+        [options]="accuracyOptions"
+        [value]="accuracyFilter()"
+        (selected)="filterAccuracy($event)"
+      />
+    </ng-template>
+
+    <ng-template #stockHeader>
+      <button
+        type="button"
+        class="ml-auto flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('stock')"
+        [attr.aria-sort]="
+          isSorted('stock') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('stock')"
+      >
+        Остаток
+        @if (sortIcon('stock'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #stockFilter>
+      <app-number-range
+        [from]="stockFrom()"
+        [to]="stockTo()"
+        (rangeChange)="filterStockRange($event)"
+      />
+    </ng-template>
+
+    <ng-template #coverHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('cover')"
+        [attr.aria-sort]="
+          isSorted('cover') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('cover')"
+      >
+        Хватит на
+        @if (sortIcon('cover'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #coverFilter>
+      <app-number-range
+        [from]="coverFrom()"
+        [to]="coverTo()"
+        (rangeChange)="filterCoverRange($event)"
+      />
+    </ng-template>
+
+    <ng-template #suggestedHeader>
+      <button
+        type="button"
+        class="ml-auto flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('suggested')"
+        [attr.aria-sort]="
+          isSorted('suggested') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('suggested')"
+      >
+        Заказать
+        @if (sortIcon('suggested'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #suggestedFilter>
+      <app-number-range
+        [from]="suggestedFrom()"
+        [to]="suggestedTo()"
+        (rangeChange)="filterSuggestedRange($event)"
+      />
+    </ng-template>
+
+    <ng-template #costHeader>
+      <button
+        type="button"
+        class="ml-auto flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('cost')"
+        [attr.aria-sort]="
+          isSorted('cost') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('cost')"
+      >
+        На сумму
+        @if (sortIcon('cost'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #costFilter>
+      <app-number-range
+        [from]="costFrom()"
+        [to]="costTo()"
+        (rangeChange)="filterCostRange($event)"
+      />
+    </ng-template>
+
+    <ng-template
+      appTableColumn="name"
+      [headerTemplate]="nameHeader"
+      [filterTemplate]="nameFilter"
+      width="w-56"
+      let-item
+    >
+      <p class="break-words">{{ item.name }}</p>
+    </ng-template>
+
+    <ng-template
+      appTableColumn="barcode"
+      [headerTemplate]="barcodeHeader"
+      [filterTemplate]="barcodeFilter"
+      width="w-40"
+      let-item
+    >
+      <p class="whitespace-nowrap text-neutral-500">{{ item.barcode || 'без штрихкода' }}</p>
+    </ng-template>
+
+    <ng-template
+      appTableColumn="supplier"
+      [headerTemplate]="supplierHeader"
+      [filterTemplate]="supplierFilter"
+      width="w-44"
+      let-item
+    >
+      <p class="break-words">{{ supplierName(item) }}</p>
+    </ng-template>
+
+    <ng-template
+      appTableColumn="accuracy"
+      [headerTemplate]="accuracyHeader"
+      [filterTemplate]="accuracyFilterTpl"
+      width="w-40"
+      let-item
+    >
+      <span class="flex items-center gap-2 whitespace-nowrap">
+        <app-icon
+          [icon]="accuracyIcon(item.forecast_error)"
+          [class]="accuracyClasses(item.forecast_error)"
+        />
+        {{ accuracyLabel(item.forecast_error) }}
+      </span>
+    </ng-template>
+
+    <ng-template
+      appTableColumn="stock"
+      [headerTemplate]="stockHeader"
+      [filterTemplate]="stockFilter"
+      width="w-28"
+      align="right"
+      let-item
+    >
+      <p [class]="isOut(item) ? 'text-red-600' : ''">
+        {{ formatAmount(item.stock) }} {{ item.measure }}
+      </p>
+      <p class="mt-0.5 text-neutral-400">{{ formatAmount(item.per_day) }} в день</p>
+    </ng-template>
+
+    <ng-template
+      appTableColumn="cover"
+      [headerTemplate]="coverHeader"
+      [filterTemplate]="coverFilter"
+      width="w-32"
+      let-item
+    >
+      <span
+        class="flex items-center gap-2 whitespace-nowrap"
+        [class]="isOut(item) ? 'text-red-600' : 'text-amber-600'"
+      >
+        <app-icon [icon]="isOut(item) ? outIcon : lowIcon" />
+        {{ formatCover(item.cover_days) }}
+      </span>
+    </ng-template>
+
+    <ng-template
+      appTableColumn="suggested"
+      [headerTemplate]="suggestedHeader"
+      [filterTemplate]="suggestedFilter"
+      width="w-28"
+      align="right"
+      let-item
+    >
+      <span class="font-medium">{{ formatAmount(item.suggested) }} {{ item.measure }}</span>
+    </ng-template>
+
+    <ng-template
+      appTableColumn="cost"
+      [headerTemplate]="costHeader"
+      [filterTemplate]="costFilter"
+      width="w-32"
+      align="right"
+      let-item
+    >
+      <span class="text-neutral-500">{{ formatMoney(item.cost) }}</span>
+    </ng-template>
+
+    <ng-template appTableColumn="actions" width="w-12" align="right" let-item>
+      @if (current.status === 'ready') {
+        <app-menu ariaLabel="Действия с позицией">
+          <button
+            appMenuItem
+            class="text-emerald-700"
+            [disabled]="!!approving() || busy() || building()"
+            (click)="approveItem(item)"
+          >
+            <app-icon [icon]="approveIcon" [size]="14" />
+            Одобрить
+          </button>
+        </app-menu>
       }
-    </div>
-  }
+    </ng-template>
+  </app-table>
+
+  <nav class="mt-4 flex items-center gap-2" aria-label="Страницы">
+    <app-button
+      variant="secondary"
+      [icon]="true"
+      [disabled]="shownPage() <= 1"
+      ariaLabel="Предыдущая страница"
+      (click)="goTo(shownPage() - 1)"
+    >
+      <app-icon [icon]="prevIcon" />
+    </app-button>
+
+    <app-button
+      variant="secondary"
+      [icon]="true"
+      [disabled]="shownPage() >= pageCount()"
+      ariaLabel="Следующая страница"
+      (click)="goTo(shownPage() + 1)"
+    >
+      <app-icon [icon]="nextIcon" />
+    </app-button>
+
+    <p class="text-sm text-neutral-500">{{ rangeLabel() }}</p>
+  </nav>
 }

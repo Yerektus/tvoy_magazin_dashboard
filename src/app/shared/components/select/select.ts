@@ -1,19 +1,24 @@
 import {
   Component,
+  DestroyRef,
   ElementRef,
+  Injector,
+  afterNextRender,
+  booleanAttribute,
   computed,
   effect,
   inject,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { Check, ChevronDown } from 'lucide';
 
 import { Icon } from '../icon/icon';
 
-/** Высота списка (`max-h-64`) с отступом: столько места ему нужно снизу. */
-const PANEL_HEIGHT = 264;
+const GAP = 4;
+const EDGE = 8;
 
 /** Значение пункта: идентификатор из базы или строковый код. */
 export type SelectValue = string | number;
@@ -36,8 +41,7 @@ export interface SelectOption {
  * />
  * ```
  *
- * Список раскрывается под кнопкой обычным `absolute`, так что внутри
- * контейнера с `overflow: hidden` его обрежет — там нужен `app-menu`.
+ * Панель висит на `fixed`-координатах — иначе её обрезал бы скролл таблицы.
  */
 @Component({
   selector: 'app-select',
@@ -47,6 +51,7 @@ export interface SelectOption {
     class: 'relative block',
     '(document:pointerdown)': 'onDocumentPointerDown($event)',
     '(document:keydown.escape)': 'close()',
+    '(window:resize)': 'close()',
   },
 })
 export class Select {
@@ -56,11 +61,12 @@ export class Select {
   readonly placeholder = input('');
   readonly disabled = input(false);
   readonly ariaLabel = input('');
+  /** Высота как у фильтров таблицы: `h-8`, скругление как у инпута. */
+  readonly compact = input(false, { transform: booleanAttribute });
   readonly selected = output<SelectValue>();
 
   protected readonly open = signal(false);
-  /** Список раскрылся вверх: снизу не помещался. */
-  protected readonly up = signal(false);
+  protected readonly position = signal({ top: 0, left: 0, width: 0 });
 
   protected readonly chevronIcon = ChevronDown;
   protected readonly checkIcon = Check;
@@ -70,8 +76,11 @@ export class Select {
   );
 
   protected readonly label = computed(() => this.current()?.label ?? this.placeholder());
+  protected readonly empty = computed(() => this.value() === null || this.value() === '');
 
+  private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   constructor() {
     // Запрос ушёл, кнопка заблокировалась — открытый список закрываем.
@@ -80,6 +89,29 @@ export class Select {
         this.open.set(false);
       }
     });
+
+    const onScroll = (event: Event) => {
+      const panel = this.panel()?.nativeElement;
+      const target = event.target as Node | null;
+
+      // Прокрутка самого списка не должна его закрывать.
+      if (panel && target && panel.contains(target)) {
+        return;
+      }
+
+      this.close();
+    };
+
+    effect((onCleanup) => {
+      if (!this.open()) {
+        return;
+      }
+
+      document.addEventListener('scroll', onScroll, true);
+      onCleanup(() => document.removeEventListener('scroll', onScroll, true));
+    });
+
+    inject(DestroyRef).onDestroy(() => document.removeEventListener('scroll', onScroll, true));
   }
 
   protected toggle(): void {
@@ -88,13 +120,40 @@ export class Select {
       return;
     }
 
-    // В сайдбаре телефона выбор стоит у самого низа экрана — список туда
-    // просто не влезает, и половина магазинов оказывается за краем.
     const trigger = this.host.nativeElement.getBoundingClientRect();
-    const below = window.innerHeight - trigger.bottom;
-
-    this.up.set(below < PANEL_HEIGHT && trigger.top > below);
+    this.position.set({
+      top: trigger.bottom + GAP,
+      left: Math.min(Math.max(EDGE, trigger.left), window.innerWidth - trigger.width - EDGE),
+      width: trigger.width,
+    });
     this.open.set(true);
+
+    afterNextRender(
+      () => {
+        const panel = this.panel()?.nativeElement;
+        if (!panel) {
+          return;
+        }
+
+        const { height, width } = panel.getBoundingClientRect();
+        const left = Math.min(
+          Math.max(EDGE, trigger.left),
+          window.innerWidth - Math.max(width, trigger.width) - EDGE,
+        );
+
+        if (trigger.bottom + GAP + height > window.innerHeight - EDGE) {
+          this.position.set({
+            top: Math.max(EDGE, trigger.top - GAP - height),
+            left,
+            width: trigger.width,
+          });
+          return;
+        }
+
+        this.position.update((current) => ({ ...current, left }));
+      },
+      { injector: this.injector },
+    );
   }
 
   protected choose(option: SelectOption): void {

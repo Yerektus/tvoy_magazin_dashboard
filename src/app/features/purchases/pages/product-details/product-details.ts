@@ -20,7 +20,7 @@ import { Toasts } from '../../../../shared/services/toasts';
 import { Umag } from '../../../extensions/services/umag';
 import { soldOf } from '../../components/chart-theme';
 import { SalesForecastChart } from '../../components/sales-forecast-chart/sales-forecast-chart';
-import { formatAmount, formatDate, formatTime } from '../../models/plan';
+import { accuracyLabel, formatAmount, formatDate, formatError, formatTime } from '../../models/plan';
 import { type StoreProductDetail, FORECAST_MODEL_IDS, forecastModelLabel } from '../../models/product';
 import { Planning } from '../../services/planning';
 
@@ -51,10 +51,6 @@ const HISTORY_USAGE: SelectOption[] = [
 
 const BLOCK_TABS = ['Продажи', 'Прогноз'] as const;
 
-/** Модель промахивается на четверть — для дневного спроса это ещё нормально. */
-const GOOD_ERROR = 0.25;
-const FAIR_ERROR = 0.5;
-
 /** Итоги по дневному ряду за выбранный период истории. */
 interface PeriodStats {
   days: number;
@@ -79,7 +75,9 @@ export class ProductDetails {
   protected readonly formatAmount = formatAmount;
   protected readonly formatChange = formatChange;
   protected readonly formatDate = formatDate;
+  protected readonly formatError = formatError;
   protected readonly formatTime = formatTime;
+  protected readonly accuracyLabel = accuracyLabel;
 
   protected readonly horizons = HORIZONS;
   protected readonly historyOptions = HISTORY;
@@ -173,26 +171,6 @@ export class ProductDetails {
 
     return formatChange(factor - 1);
   });
-
-  protected formatError(value: string | null | undefined): string {
-    const error = Number(value ?? NaN);
-
-    if (Number.isNaN(error)) {
-      return '—';
-    }
-
-    return `${(error * 100).toLocaleString('ru-RU', { maximumFractionDigits: 0 })}%`;
-  }
-
-  protected accuracyLabel(value: string | null | undefined): string {
-    const error = Number(value ?? NaN);
-
-    if (Number.isNaN(error)) {
-      return '—';
-    }
-
-    return error <= GOOD_ERROR ? 'Высокая' : error <= FAIR_ERROR ? 'Средняя' : 'Низкая';
-  }
 
   private version = 0;
   private forecastSeq = 0;

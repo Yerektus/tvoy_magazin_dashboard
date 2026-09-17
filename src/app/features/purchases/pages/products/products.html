@@ -88,7 +88,7 @@
 
   <app-table
     class="block"
-    minWidth="min-w-[52rem]"
+    minWidth="min-w-[64rem]"
     maxHeight="h-[calc(100dvh-11rem)] max-h-[calc(100dvh-11rem)]"
     [rows]="products()"
     [trackKey]="trackProduct"
@@ -153,6 +153,34 @@
         [value]="barcodeQuery()"
         (input)="searchBarcode($event)"
         (click)="$event.stopPropagation()"
+      />
+    </ng-template>
+
+    <ng-template #accuracyHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('accuracy')"
+        [attr.aria-sort]="
+          isSorted('accuracy') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('accuracy')"
+      >
+        Точность
+        @if (sortIcon('accuracy'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #accuracyFilterTpl>
+      <app-select
+        compact
+        placeholder="Все"
+        ariaLabel="Точность прогноза"
+        [options]="accuracyOptions"
+        [value]="accuracyQuery()"
+        (selected)="filterAccuracy($event)"
       />
     </ng-template>
 
@@ -224,6 +252,22 @@
       let-product
     >
       <p class="whitespace-nowrap text-neutral-500">{{ product.barcode || 'без штрихкода' }}</p>
+    </ng-template>
+
+    <ng-template
+      appTableColumn="accuracy"
+      [headerTemplate]="accuracyHeader"
+      [filterTemplate]="accuracyFilterTpl"
+      width="w-40"
+      let-product
+    >
+      <span class="flex items-center gap-2 whitespace-nowrap">
+        <app-icon
+          [icon]="accuracyIcon(product.forecast_error)"
+          [class]="accuracyClasses(product.forecast_error)"
+        />
+        {{ accuracyLabel(product.forecast_error) }}
+      </span>
     </ng-template>
 
     <ng-template

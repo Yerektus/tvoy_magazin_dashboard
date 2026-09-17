@@ -20,6 +20,7 @@ import {
 } from '../../../../shared/components/number-range/number-range';
 import { Empty } from '../../../../shared/components/empty/empty';
 import { Icon } from '../../../../shared/components/icon/icon';
+import { Select, type SelectValue } from '../../../../shared/components/select/select';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Table } from '../../../../shared/components/table/table';
 import { TableColumn } from '../../../../shared/components/table/table-column';
@@ -27,7 +28,16 @@ import { Toolbar } from '../../../../shared/components/toolbar/toolbar';
 import { PageHeader } from '../../../../shared/services/page-header';
 import { Toasts } from '../../../../shared/services/toasts';
 import { Umag } from '../../../extensions/services/umag';
-import { formatAmount, formatDate, formatTime } from '../../models/plan';
+import {
+  ACCURACY_FILTER_OPTIONS,
+  type AccuracyLevel,
+  accuracyClasses,
+  accuracyIcon,
+  accuracyLabel,
+  formatAmount,
+  formatDate,
+  formatTime,
+} from '../../models/plan';
 import {
   type ProductsQuery,
   type ProductsSnapshot,
@@ -44,7 +54,7 @@ const PAGE_SIZE = 50;
 /** Поиск не бьёт API на каждую букву. */
 const SEARCH_DELAY = 300;
 
-type SortColumn = 'name' | 'barcode' | 'sold' | 'last';
+type SortColumn = 'name' | 'barcode' | 'sold' | 'last' | 'accuracy';
 type SortDirection = 'asc' | 'desc';
 
 /**
@@ -60,6 +70,7 @@ type SortDirection = 'asc' | 'desc';
     Icon,
     NumberRange,
     RouterLink,
+    Select,
     Spinner,
     Table,
     TableColumn,
@@ -76,6 +87,10 @@ export class Products {
   protected readonly formatAmount = formatAmount;
   protected readonly formatDate = formatDate;
   protected readonly formatTime = formatTime;
+  protected readonly accuracyLabel = accuracyLabel;
+  protected readonly accuracyIcon = accuracyIcon;
+  protected readonly accuracyClasses = accuracyClasses;
+  protected readonly accuracyOptions = ACCURACY_FILTER_OPTIONS;
 
   protected readonly products = signal<StoreProduct[]>([]);
   protected readonly total = signal(0);
@@ -87,6 +102,7 @@ export class Products {
   protected readonly lastTo = signal('');
   protected readonly soldFrom = signal('');
   protected readonly soldTo = signal('');
+  protected readonly accuracyQuery = signal<AccuracyLevel | ''>('');
   protected readonly page = signal(1);
   protected readonly sortColumn = signal<SortColumn>('sold');
   protected readonly sortDirection = signal<SortDirection>('desc');
@@ -133,7 +149,8 @@ export class Products {
       this.lastFrom().length > 0 ||
       this.lastTo().length > 0 ||
       this.soldFrom().length > 0 ||
-      this.soldTo().length > 0,
+      this.soldTo().length > 0 ||
+      this.accuracyQuery().length > 0,
   );
 
   /**
@@ -194,13 +211,18 @@ export class Products {
     void this.refresh(this.version, { table: true, page: 1 });
   }
 
+  protected filterAccuracy(value: SelectValue): void {
+    this.accuracyQuery.set(value as AccuracyLevel | '');
+    void this.refresh(this.version, { table: true, page: 1 });
+  }
+
   protected toggleSort(column: SortColumn): void {
     const order: SortDirection =
       this.sortColumn() === column
         ? this.sortDirection() === 'asc'
           ? 'desc'
           : 'asc'
-        : column === 'name' || column === 'barcode'
+        : column === 'name' || column === 'barcode' || column === 'accuracy'
           ? 'asc'
           : 'desc';
 
@@ -281,6 +303,7 @@ export class Products {
     this.lastTo.set('');
     this.soldFrom.set('');
     this.soldTo.set('');
+    this.accuracyQuery.set('');
     this.page.set(1);
     this.sortColumn.set('sold');
     this.sortDirection.set('desc');
@@ -403,6 +426,7 @@ export class Products {
       lastTo: to || undefined,
       soldFrom: sold.from,
       soldTo: sold.to,
+      accuracy: overrides.accuracy ?? this.accuracyQuery(),
     };
   }
 

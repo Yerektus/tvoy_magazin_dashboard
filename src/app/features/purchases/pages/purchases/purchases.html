@@ -1,3 +1,27 @@
+<ng-template #headerActions>
+  @if (connected() && !loading()) {
+    <span class="sm:hidden">
+      <app-button
+        variant="primary"
+        size="lg"
+        [icon]="true"
+        ariaLabel="Новая планировка"
+        (click)="dialogOpen.set(true)"
+      >
+        <app-icon [icon]="addIcon" />
+      </app-button>
+    </span>
+    <span class="hidden sm:contents">
+      <app-button variant="primary" (click)="dialogOpen.set(true)">
+        <span class="flex items-center gap-2">
+          <app-icon [icon]="addIcon" />
+          Новая планировка
+        </span>
+      </app-button>
+    </span>
+  }
+</ng-template>
+
 @if (loading()) {
   <div class="flex min-h-[70vh] items-center justify-center text-neutral-400">
     <app-spinner [size]="24" />
@@ -65,13 +89,28 @@
             <div class="overflow-hidden">
               <app-table
                 class="block pb-4"
-                minWidth="min-w-[56rem]"
+                minWidth="min-w-[72rem]"
                 [rows]="purchase.items"
                 [trackKey]="trackItem"
               >
-                <ng-template appTableColumn="name" header="Товар" width="w-60" let-item>
+                <ng-template appTableColumn="name" header="Товар" width="w-56" let-item>
                   <p class="break-words">{{ item.name }}</p>
-                  <p class="mt-0.5 text-neutral-400">{{ item.barcode || 'без штрихкода' }}</p>
+                </ng-template>
+
+                <ng-template appTableColumn="barcode" header="Штрихкод" width="w-40" let-item>
+                  <p class="whitespace-nowrap text-neutral-500">
+                    {{ item.barcode || 'без штрихкода' }}
+                  </p>
+                </ng-template>
+
+                <ng-template appTableColumn="accuracy" header="Точность" width="w-36" let-item>
+                  <span class="flex items-center gap-2 whitespace-nowrap">
+                    <app-icon
+                      [icon]="accuracyIcon(item.forecast_error)"
+                      [class]="accuracyClasses(item.forecast_error)"
+                    />
+                    {{ accuracyLabel(item.forecast_error) }}
+                  </span>
                 </ng-template>
 
                 <ng-template appTableColumn="stock" header="Остаток" width="w-28" let-item>
@@ -119,64 +158,263 @@
     }
   }
 } @else {
-  <app-toolbar>
+  <app-toolbar class="mb-4">
     <p class="text-sm text-neutral-500">
-      Всего: <span class="text-black">{{ plans().length }}</span>
+      Всего: <span class="text-black">{{ total().toLocaleString('ru-RU') }}</span>
     </p>
-
-    <div toolbarActions>
-      <app-button variant="primary" (click)="dialogOpen.set(true)">
-        <span class="flex items-center gap-2">
-          <app-icon [icon]="addIcon" />
-          Новая планировка
-        </span>
-      </app-button>
-    </div>
   </app-toolbar>
 
   <app-table
-    class="mt-4 block"
-    minWidth="min-w-[48rem]"
-    [rows]="plans()"
+    class="block"
+    minWidth="min-w-[64rem]"
+    maxHeight="h-[calc(100dvh-14rem)] max-h-[calc(100dvh-14rem)]"
+    [rows]="shownPlans()"
     [trackKey]="trackPlan"
-    [loading]="loading()"
-    [empty]="emptyText()"
     [clickable]="true"
+    [empty]="emptyText()"
     (rowClick)="open($event)"
   >
-    <ng-template appTableColumn="name" header="Планировка" width="w-72" let-plan>
+    <ng-template #nameHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('name')"
+        [attr.aria-sort]="
+          isSorted('name') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('name')"
+      >
+        Планировка
+        @if (sortIcon('name'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #nameFilter>
+      <input
+        type="search"
+        class="h-8 w-full rounded-md border border-neutral-200 bg-white px-2 text-sm outline-none placeholder:text-neutral-400 hover:border-blue-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+        placeholder="Название"
+        autocomplete="off"
+        [value]="query()"
+        (input)="search($event)"
+        (click)="$event.stopPropagation()"
+      />
+    </ng-template>
+
+    <ng-template #horizonHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('horizon')"
+        [attr.aria-sort]="
+          isSorted('horizon') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('horizon')"
+      >
+        Горизонт
+        @if (sortIcon('horizon'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #horizonFilterTpl>
+      <app-select
+        compact
+        placeholder="Все"
+        ariaLabel="Горизонт закупа"
+        [options]="horizonOptions"
+        [value]="horizonQuery()"
+        (selected)="filterHorizon($event)"
+      />
+    </ng-template>
+
+    <ng-template #statusHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('status')"
+        [attr.aria-sort]="
+          isSorted('status') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('status')"
+      >
+        Статус
+        @if (sortIcon('status'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #statusFilterTpl>
+      <app-select
+        compact
+        placeholder="Все"
+        ariaLabel="Статус"
+        [options]="statusOptions"
+        [value]="statusFilter()"
+        (selected)="filterStatus($event)"
+      />
+    </ng-template>
+
+    <ng-template #itemsHeader>
+      <button
+        type="button"
+        class="ml-auto flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('items')"
+        [attr.aria-sort]="
+          isSorted('items') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('items')"
+      >
+        Позиции
+        @if (sortIcon('items'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #itemsFilter>
+      <app-number-range
+        [from]="itemsFrom()"
+        [to]="itemsTo()"
+        (rangeChange)="filterItemsRange($event)"
+      />
+    </ng-template>
+
+    <ng-template #costHeader>
+      <button
+        type="button"
+        class="ml-auto flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('cost')"
+        [attr.aria-sort]="
+          isSorted('cost') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('cost')"
+      >
+        На сумму
+        @if (sortIcon('cost'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #costFilter>
+      <app-number-range
+        [from]="costFrom()"
+        [to]="costTo()"
+        (rangeChange)="filterCostRange($event)"
+      />
+    </ng-template>
+
+    <ng-template #timeHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('time')"
+        [attr.aria-sort]="
+          isSorted('time') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('time')"
+      >
+        Дата
+        @if (sortIcon('time'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #timeFilter>
+      <app-date-range
+        [from]="dateFrom()"
+        [to]="dateTo()"
+        (rangeChange)="filterDateRange($event)"
+      />
+    </ng-template>
+
+    <ng-template
+      appTableColumn="name"
+      [headerTemplate]="nameHeader"
+      [filterTemplate]="nameFilter"
+      width="w-56"
+      let-plan
+    >
       <a
         [routerLink]="['/purchases', plan.id]"
         class="block font-normal break-words hover:text-blue-600"
       >
         {{ planTitle(plan) }}
       </a>
-      <p class="mt-0.5 text-neutral-400">
-        {{ horizonLabel(plan.horizon) }}@if (plan.use_stock === false) {
-          · без склада
-        }
-      </p>
     </ng-template>
 
-    <ng-template appTableColumn="status" header="Статус" width="w-40" let-plan>
-      <span class="flex items-center gap-2 whitespace-nowrap" [class]="statusClasses(plan.status)">
-        <app-icon [icon]="statusIcon(plan.status)" />
+    <ng-template
+      appTableColumn="horizon"
+      [headerTemplate]="horizonHeader"
+      [filterTemplate]="horizonFilterTpl"
+      width="w-48"
+      let-plan
+    >
+      <p>{{ horizonLabel(plan.horizon) }}</p>
+      @if (plan.use_stock === false) {
+        <p class="mt-0.5 text-neutral-400">без склада</p>
+      }
+    </ng-template>
+
+    <ng-template
+      appTableColumn="status"
+      [headerTemplate]="statusHeader"
+      [filterTemplate]="statusFilterTpl"
+      width="w-40"
+      let-plan
+    >
+      <span class="flex items-center gap-2 whitespace-nowrap">
+        <app-icon [icon]="statusIcon(plan.status)" [class]="statusClasses(plan.status)" />
         {{ statusLabel(plan.status) }}
       </span>
     </ng-template>
 
-    <ng-template appTableColumn="total" header="К заказу" width="w-40" align="right" let-plan>
+    <ng-template
+      appTableColumn="items"
+      [headerTemplate]="itemsHeader"
+      [filterTemplate]="itemsFilter"
+      width="w-32"
+      align="right"
+      let-plan
+    >
       @if (plan.status === 'ready') {
-        <p>{{ plan.items_total }} поз.</p>
-        <p class="mt-0.5 text-neutral-400">{{ formatMoney(plan.total_cost) }}</p>
+        {{ plan.items_total.toLocaleString('ru-RU') }} поз.
       } @else {
         <span class="text-neutral-400">—</span>
       }
     </ng-template>
 
-    <ng-template appTableColumn="time" header="Дата" width="w-28" let-plan>
-      <p class="whitespace-nowrap text-neutral-500">{{ formatDate(plan.created_at) }}</p>
-      <p class="mt-0.5 whitespace-nowrap text-neutral-400">{{ formatTime(plan.created_at) }}</p>
+    <ng-template
+      appTableColumn="cost"
+      [headerTemplate]="costHeader"
+      [filterTemplate]="costFilter"
+      width="w-36"
+      align="right"
+      let-plan
+    >
+      @if (plan.status === 'ready') {
+        {{ formatMoney(plan.total_cost) }}
+      } @else {
+        <span class="text-neutral-400">—</span>
+      }
+    </ng-template>
+
+    <ng-template
+      appTableColumn="time"
+      [headerTemplate]="timeHeader"
+      [filterTemplate]="timeFilter"
+      width="w-40"
+      let-plan
+    >
+      <p class="whitespace-nowrap text-neutral-500">
+        {{ formatDate(plan.created_at) }} {{ formatTime(plan.created_at) }}
+      </p>
     </ng-template>
 
     <ng-template appTableColumn="actions" width="w-12" align="right" let-plan>
@@ -193,6 +431,30 @@
       </app-menu>
     </ng-template>
   </app-table>
+
+  <nav class="mt-4 flex items-center gap-2" aria-label="Страницы">
+    <app-button
+      variant="secondary"
+      [icon]="true"
+      [disabled]="shownPage() <= 1"
+      ariaLabel="Предыдущая страница"
+      (click)="goTo(shownPage() - 1)"
+    >
+      <app-icon [icon]="prevIcon" />
+    </app-button>
+
+    <app-button
+      variant="secondary"
+      [icon]="true"
+      [disabled]="shownPage() >= pageCount()"
+      ariaLabel="Следующая страница"
+      (click)="goTo(shownPage() + 1)"
+    >
+      <app-icon [icon]="nextIcon" />
+    </app-button>
+
+    <p class="text-sm text-neutral-500">{{ rangeLabel() }}</p>
+  </nav>
 }
 
 <app-create-plan-dialog
