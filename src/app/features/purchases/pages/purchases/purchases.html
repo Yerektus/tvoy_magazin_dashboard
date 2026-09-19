@@ -89,7 +89,7 @@
             <div class="overflow-hidden">
               <app-table
                 class="block pb-4"
-                minWidth="min-w-[72rem]"
+                minWidth="min-w-[80rem]"
                 [rows]="purchase.items"
                 [trackKey]="trackItem"
               >
@@ -114,19 +114,15 @@
                 </ng-template>
 
                 <ng-template appTableColumn="stock" header="Остаток" width="w-28" let-item>
-                  <p [class]="isOut(item) ? 'text-red-600' : ''">
-                    {{ formatAmount(item.stock, item.measure) }} {{ item.measure }}
-                  </p>
-                  <p class="mt-0.5 text-neutral-400">{{ formatAmount(item.per_day, item.measure) }} в день</p>
+                  <p>{{ formatAmount(item.stock, item.measure) }} {{ item.measure }}</p>
+                </ng-template>
+
+                <ng-template appTableColumn="per_day" header="В день" width="w-28" let-item>
+                  <p>{{ formatAmount(item.per_day, item.measure) }} {{ item.measure }}</p>
                 </ng-template>
 
                 <ng-template appTableColumn="cover" header="Хватит на" width="w-32" let-item>
-                  <span
-                    class="flex items-center gap-2 whitespace-nowrap"
-                    [class]="isOut(item) ? 'text-red-600' : 'text-amber-600'"
-                  >
-                    {{ formatCover(item.cover_days) }}
-                  </span>
+                  <span class="whitespace-nowrap">{{ formatCover(item.cover_days) }}</span>
                 </ng-template>
 
                 <ng-template

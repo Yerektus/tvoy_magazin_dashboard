@@ -121,7 +121,7 @@
 
   <app-table
     class="block"
-    minWidth="min-w-[80rem]"
+    minWidth="min-w-[88rem]"
     maxHeight="h-[calc(100dvh-14rem)] max-h-[calc(100dvh-14rem)]"
     [rows]="shownItems()"
     [trackKey]="trackItem"
@@ -271,6 +271,31 @@
       />
     </ng-template>
 
+    <ng-template #perDayHeader>
+      <button
+        type="button"
+        class="ml-auto flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('per_day')"
+        [attr.aria-sort]="
+          isSorted('per_day') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('per_day')"
+      >
+        В день
+        @if (sortIcon('per_day'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #perDayFilter>
+      <app-number-range
+        [from]="perDayFrom()"
+        [to]="perDayTo()"
+        (rangeChange)="filterPerDayRange($event)"
+      />
+    </ng-template>
+
     <ng-template #coverHeader>
       <button
         type="button"
@@ -400,10 +425,18 @@
       align="right"
       let-item
     >
-      <p [class]="isOut(item) ? 'text-red-600' : ''">
-        {{ formatAmount(item.stock, item.measure) }} {{ item.measure }}
-      </p>
-      <p class="mt-0.5 text-neutral-400">{{ formatAmount(item.per_day, item.measure) }} в день</p>
+      <p>{{ formatAmount(item.stock, item.measure) }} {{ item.measure }}</p>
+    </ng-template>
+
+    <ng-template
+      appTableColumn="per_day"
+      [headerTemplate]="perDayHeader"
+      [filterTemplate]="perDayFilter"
+      width="w-28"
+      align="right"
+      let-item
+    >
+      <p>{{ formatAmount(item.per_day, item.measure) }} {{ item.measure }}</p>
     </ng-template>
 
     <ng-template
@@ -413,11 +446,11 @@
       width="w-32"
       let-item
     >
-      <span
-        class="flex items-center gap-2 whitespace-nowrap"
-        [class]="isOut(item) ? 'text-red-600' : 'text-amber-600'"
-      >
-        <app-icon [icon]="isOut(item) ? outIcon : lowIcon" />
+      <span class="flex items-center gap-2 whitespace-nowrap">
+        <app-icon
+          [icon]="isOut(item) ? outIcon : lowIcon"
+          [class]="isOut(item) ? 'text-red-600' : 'text-amber-600'"
+        />
         {{ formatCover(item.cover_days) }}
       </span>
     </ng-template>

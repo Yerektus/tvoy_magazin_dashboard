@@ -77,7 +77,15 @@ const HINT_FADE_MS = 400;
 const PAGE_SIZE = 50;
 
 type SortColumn =
-  'name' | 'barcode' | 'supplier' | 'stock' | 'cover' | 'suggested' | 'cost' | 'accuracy';
+  | 'name'
+  | 'barcode'
+  | 'supplier'
+  | 'stock'
+  | 'per_day'
+  | 'cover'
+  | 'suggested'
+  | 'cost'
+  | 'accuracy';
 type SortDirection = 'asc' | 'desc';
 
 const ACCURACY_ORDER: Record<AccuracyLevel, number> = {
@@ -169,6 +177,8 @@ export class PlanDetails {
   protected readonly accuracyFilter = signal<AccuracyLevel[]>([]);
   protected readonly stockFrom = signal('');
   protected readonly stockTo = signal('');
+  protected readonly perDayFrom = signal('');
+  protected readonly perDayTo = signal('');
   protected readonly coverFrom = signal('');
   protected readonly coverTo = signal('');
   protected readonly suggestedFrom = signal('');
@@ -206,6 +216,8 @@ export class PlanDetails {
       this.accuracyFilter().length > 0 ||
       this.stockFrom().length > 0 ||
       this.stockTo().length > 0 ||
+      this.perDayFrom().length > 0 ||
+      this.perDayTo().length > 0 ||
       this.coverFrom().length > 0 ||
       this.coverTo().length > 0 ||
       this.suggestedFrom().length > 0 ||
@@ -220,6 +232,7 @@ export class PlanDetails {
     const supplier = this.supplierQuery().trim().toLowerCase();
     const accuracy = this.accuracyFilter();
     const stock = orderedBounds(this.stockFrom(), this.stockTo());
+    const perDay = orderedBounds(this.perDayFrom(), this.perDayTo());
     const cover = orderedBounds(this.coverFrom(), this.coverTo());
     const suggested = orderedBounds(this.suggestedFrom(), this.suggestedTo());
     const cost = orderedBounds(this.costFrom(), this.costTo());
@@ -242,6 +255,10 @@ export class PlanDetails {
       }
 
       if (!inRange(Number(item.stock), stock)) {
+        return false;
+      }
+
+      if (!inRange(Number(item.per_day), perDay)) {
         return false;
       }
 
@@ -407,6 +424,12 @@ export class PlanDetails {
   protected filterStockRange(range: NumberRangeValue): void {
     this.stockFrom.set(range.from);
     this.stockTo.set(range.to);
+    this.page.set(1);
+  }
+
+  protected filterPerDayRange(range: NumberRangeValue): void {
+    this.perDayFrom.set(range.from);
+    this.perDayTo.set(range.to);
     this.page.set(1);
   }
 
@@ -644,6 +667,8 @@ export class PlanDetails {
       this.accuracyFilter.set([]);
       this.stockFrom.set('');
       this.stockTo.set('');
+      this.perDayFrom.set('');
+      this.perDayTo.set('');
       this.coverFrom.set('');
       this.coverTo.set('');
       this.suggestedFrom.set('');

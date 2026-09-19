@@ -47,7 +47,6 @@ import {
   formatMoney,
   formatTime,
   horizonLabel,
-  isOut,
   planTitle,
   statusClasses,
   statusIcon,
@@ -131,7 +130,6 @@ export class Purchases {
   protected readonly formatMoney = formatMoney;
   protected readonly formatTime = formatTime;
   protected readonly horizonLabel = horizonLabel;
-  protected readonly isOut = isOut;
   protected readonly planTitle = planTitle;
   protected readonly statusClasses = statusClasses;
   protected readonly statusIcon = statusIcon;
