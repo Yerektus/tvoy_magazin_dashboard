@@ -41,6 +41,9 @@ export interface SelectOption {
  * />
  * ```
  *
+ * Несколько пунктов: `multiple` и `(selectedValues)`. Список не закрывается
+ * по клику — можно отметить высокую и среднюю точность подряд.
+ *
  * Панель висит на `fixed`-координатах — иначе её обрезал бы скролл таблицы.
  */
 @Component({
@@ -56,14 +59,17 @@ export interface SelectOption {
 })
 export class Select {
   readonly options = input.required<readonly SelectOption[]>();
-  readonly value = input<SelectValue | null>(null);
+  readonly value = input<SelectValue | readonly SelectValue[] | null>(null);
   /** Надпись, пока ничего не выбрано. */
   readonly placeholder = input('');
   readonly disabled = input(false);
   readonly ariaLabel = input('');
   /** Высота как у фильтров таблицы: `h-8`, скругление как у инпута. */
   readonly compact = input(false, { transform: booleanAttribute });
+  /** Несколько пунктов сразу: клик переключает, список остаётся открытым. */
+  readonly multiple = input(false, { transform: booleanAttribute });
   readonly selected = output<SelectValue>();
+  readonly selectedValues = output<SelectValue[]>();
 
   protected readonly open = signal(false);
   protected readonly position = signal({ top: 0, left: 0, width: 0 });
@@ -71,12 +77,24 @@ export class Select {
   protected readonly chevronIcon = ChevronDown;
   protected readonly checkIcon = Check;
 
-  protected readonly current = computed(
-    () => this.options().find((option) => option.value === this.value()) ?? null,
-  );
+  protected readonly selectedOptions = computed(() => {
+    const options = this.options();
 
-  protected readonly label = computed(() => this.current()?.label ?? this.placeholder());
-  protected readonly empty = computed(() => this.value() === null || this.value() === '');
+    if (this.multiple()) {
+      const values = new Set(asValues(this.value()));
+      return options.filter((option) => values.has(option.value));
+    }
+
+    const current = this.value();
+    const found = options.find((option) => option.value === current);
+    return found ? [found] : [];
+  });
+
+  protected readonly label = computed(() => {
+    const selected = this.selectedOptions();
+    return selected.length ? selected.map((option) => option.label).join(', ') : this.placeholder();
+  });
+  protected readonly empty = computed(() => this.selectedOptions().length === 0);
 
   private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -103,7 +121,9 @@ export class Select {
     };
 
     effect((onCleanup) => {
-      if (!this.open()) {
+      // Мультивыбор живёт в фильтре таблицы: прокрутка тела не должна
+      // закрывать список, пока отмечают несколько пунктов.
+      if (!this.open() || this.multiple()) {
         return;
       }
 
@@ -157,11 +177,32 @@ export class Select {
   }
 
   protected choose(option: SelectOption): void {
+    if (this.multiple()) {
+      const values = new Set(asValues(this.value()));
+
+      if (values.has(option.value)) {
+        values.delete(option.value);
+      } else {
+        values.add(option.value);
+      }
+
+      this.selectedValues.emit(
+        this.options()
+          .map((item) => item.value)
+          .filter((item) => values.has(item)),
+      );
+      return;
+    }
+
     this.close();
 
     if (option.value !== this.value()) {
       this.selected.emit(option.value);
     }
+  }
+
+  protected isSelected(option: SelectOption): boolean {
+    return this.selectedOptions().some((item) => item.value === option.value);
   }
 
   /** Клик мимо закрывает список — и при этом доходит до того, куда нажали. */
@@ -176,4 +217,8 @@ export class Select {
   protected close(): void {
     this.open.set(false);
   }
+}
+
+function asValues(value: SelectValue | readonly SelectValue[] | null): SelectValue[] {
+  return Array.isArray(value) ? [...value] : [];
 }

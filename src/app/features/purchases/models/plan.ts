@@ -123,9 +123,8 @@ export const accuracyIcon = (value: string | null | undefined): IconNode =>
 export const accuracyClasses = (value: string | null | undefined): string =>
   ACCURACY_CLASSES[accuracyLevel(value)];
 
-/** Пункты фильтра точности: «Все» и четыре уровня, как в колонке. */
-export const ACCURACY_FILTER_OPTIONS: { value: AccuracyLevel | ''; label: string }[] = [
-  { value: '', label: 'Все' },
+/** Пункты фильтра точности: четыре уровня, как в колонке. Пустой выбор — все. */
+export const ACCURACY_FILTER_OPTIONS: { value: AccuracyLevel; label: string }[] = [
   { value: 'high', label: ACCURACY_LABELS.high },
   { value: 'medium', label: ACCURACY_LABELS.medium },
   { value: 'low', label: ACCURACY_LABELS.low },
@@ -195,13 +194,22 @@ export function formatTime(value: string | null): string {
 /** Считается — страницу нужно опрашивать. */
 export const isBuilding = (plan: PurchasePlan | null): boolean => plan?.status === 'building';
 
+/** Штучное заказывают и показывают целым, весовое — с долями. */
+const WHOLE_MEASURES = ['шт', 'уп', 'пач', 'кор', 'бут'] as const;
+
+export function isWholeMeasure(measure?: string | null): boolean {
+  const value = (measure ?? '').trim().toLowerCase();
+
+  return WHOLE_MEASURES.some((unit) => value === unit || value.startsWith(unit));
+}
+
 /**
  * Количество без лишней точности. В базе всё с тремя знаками, но «86,167»
  * глазом читается как восемьдесят шесть тысяч, а не как 86 штук в день:
- * крупные числа показываем целыми, мелкие — с одним знаком, а меньше
- * единицы — с двумя, иначе от 0,25 кг ничего не останется.
+ * штуки всегда целые, у весового крупные числа целыми, мелкие — с одним
+ * знаком, а меньше единицы — с двумя, иначе от 0,25 кг ничего не останется.
  */
-export function formatAmount(value: string | number | null): string {
+export function formatAmount(value: string | number | null, measure?: string | null): string {
   if (value === null || value === '') {
     return '—';
   }
@@ -213,9 +221,40 @@ export function formatAmount(value: string | number | null): string {
   }
 
   const size = Math.abs(number);
-  const digits = size >= 100 ? 0 : size >= 1 ? 1 : 2;
+  const digits = isWholeMeasure(measure) ? 0 : size >= 100 ? 0 : size >= 1 ? 1 : 2;
 
   return number.toLocaleString('ru-RU', { maximumFractionDigits: digits });
+}
+
+/** Дробный спрос по штукам собираем в целые дни, сумму округляем вверх. */
+export function wholeDays(values: readonly number[]): number[] {
+  if (!values.length) {
+    return [];
+  }
+
+  const total = values.reduce((sum, value) => sum + Math.max(0, value), 0);
+
+  if (total <= 0) {
+    return values.map(() => 0);
+  }
+
+  const target = Math.max(0, Math.ceil(total - 1e-9));
+  const whole = values.map((value) => Math.max(0, Math.floor(value)));
+  let leftover = target - whole.reduce((sum, value) => sum + value, 0);
+  const result = [...whole];
+  const ranked = values
+    .map((value, index) => ({ index, frac: value - Math.floor(value), value }))
+    .sort((left, right) => right.frac - left.frac || right.value - left.value);
+
+  let step = 0;
+
+  while (leftover > 0 && ranked.length) {
+    result[ranked[step % ranked.length].index] += 1;
+    leftover -= 1;
+    step += 1;
+  }
+
+  return result;
 }
 
 /** Дни до опустевшей полки: меньше суток показываем как «сегодня». */

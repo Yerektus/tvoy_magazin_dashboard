@@ -6,6 +6,12 @@ export interface AnalyticsWeekday {
   sold: string;
 }
 
+/** Час суток в сводке: 0–23 по местному времени чека. */
+export interface AnalyticsHour {
+  hour: number;
+  sold: string;
+}
+
 /** Категория из номенклатуры: сколько SKU и какой объём. */
 export interface AnalyticsCategory {
   name: string;
@@ -28,8 +34,13 @@ export interface SalesAnalytics {
   active_days: number;
   promo_share: string | null;
   trend: string | null;
+  revenue: string | null;
+  profit: string | null;
+  visitors: number | null;
+  average_check: string | null;
   history: DailySold[];
   weekdays: AnalyticsWeekday[];
+  hours: AnalyticsHour[];
   categories: AnalyticsCategory[];
 }
 
@@ -47,7 +58,12 @@ export const emptyAnalytics = (days = 30): SalesAnalytics => ({
   active_days: 0,
   promo_share: null,
   trend: null,
+  revenue: null,
+  profit: null,
+  visitors: null,
+  average_check: null,
   history: [],
   weekdays: [],
+  hours: [],
   categories: [],
 });

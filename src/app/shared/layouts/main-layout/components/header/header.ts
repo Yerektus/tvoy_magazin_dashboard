@@ -14,7 +14,9 @@ import { PageHeader } from '../../../../services/page-header';
   templateUrl: './header.html',
   // z-20: содержимое страницы поднимает свои слои до z-10 — например, кружки
   // шагов в истории накладной, — и на прокрутке лезло поверх шапки.
-  host: { class: 'sticky top-0 z-20 block border-b border-neutral-200 bg-white' },
+  host: {
+    class: 'sticky top-0 z-20 block shrink-0 border-b border-neutral-200 bg-white',
+  },
 })
 export class Header {
   /** Название открытой страницы. Показывается, если страница не задала крошки. */

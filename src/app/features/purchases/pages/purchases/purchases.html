@@ -115,9 +115,9 @@
 
                 <ng-template appTableColumn="stock" header="Остаток" width="w-28" let-item>
                   <p [class]="isOut(item) ? 'text-red-600' : ''">
-                    {{ formatAmount(item.stock) }} {{ item.measure }}
+                    {{ formatAmount(item.stock, item.measure) }} {{ item.measure }}
                   </p>
-                  <p class="mt-0.5 text-neutral-400">{{ formatAmount(item.per_day) }} в день</p>
+                  <p class="mt-0.5 text-neutral-400">{{ formatAmount(item.per_day, item.measure) }} в день</p>
                 </ng-template>
 
                 <ng-template appTableColumn="cover" header="Хватит на" width="w-32" let-item>
@@ -137,7 +137,7 @@
                   let-item
                 >
                   <span class="font-medium"
-                    >{{ formatAmount(item.suggested) }} {{ item.measure }}</span
+                    >{{ formatAmount(item.suggested, item.measure) }} {{ item.measure }}</span
                   >
                 </ng-template>
 
@@ -343,7 +343,7 @@
     >
       <a
         [routerLink]="['/purchases', plan.id]"
-        class="block font-normal break-words hover:text-blue-600"
+        class="block font-normal break-words"
       >
         {{ planTitle(plan) }}
       </a>
@@ -356,10 +356,12 @@
       width="w-48"
       let-plan
     >
-      <p>{{ horizonLabel(plan.horizon) }}</p>
-      @if (plan.use_stock === false) {
-        <p class="mt-0.5 text-neutral-400">без склада</p>
-      }
+      <p>
+        {{ horizonLabel(plan.horizon) }}
+        @if (plan.use_stock === false) {
+          <span class="text-neutral-400"> · без склада</span>
+        }
+      </p>
     </ng-template>
 
     <ng-template

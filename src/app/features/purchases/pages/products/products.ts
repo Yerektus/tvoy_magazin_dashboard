@@ -13,7 +13,10 @@ import { Router, RouterLink } from '@angular/router';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RefreshCw } from 'lucide';
 
 import { Button } from '../../../../shared/components/button/button';
-import { DateRange, type DateRangeValue } from '../../../../shared/components/date-range/date-range';
+import {
+  DateRange,
+  type DateRangeValue,
+} from '../../../../shared/components/date-range/date-range';
 import {
   NumberRange,
   type NumberRangeValue,
@@ -102,7 +105,7 @@ export class Products {
   protected readonly lastTo = signal('');
   protected readonly soldFrom = signal('');
   protected readonly soldTo = signal('');
-  protected readonly accuracyQuery = signal<AccuracyLevel | ''>('');
+  protected readonly accuracyQuery = signal<AccuracyLevel[]>([]);
   protected readonly page = signal(1);
   protected readonly sortColumn = signal<SortColumn>('sold');
   protected readonly sortDirection = signal<SortDirection>('desc');
@@ -122,9 +125,7 @@ export class Products {
   protected readonly connected = this.planning.connected;
   protected readonly syncing = computed(() => this.status() === 'syncing');
   protected readonly failed = computed(() => this.status() === 'failed');
-  protected readonly pageCount = computed(() =>
-    Math.max(1, Math.ceil(this.total() / PAGE_SIZE)),
-  );
+  protected readonly pageCount = computed(() => Math.max(1, Math.ceil(this.total() / PAGE_SIZE)));
   /** Номер, который реально показываем: не уезжаем за конец списка. */
   protected readonly shownPage = computed(() => Math.min(this.page(), this.pageCount()));
   protected readonly rangeLabel = computed(() => {
@@ -211,9 +212,9 @@ export class Products {
     void this.refresh(this.version, { table: true, page: 1 });
   }
 
-  protected filterAccuracy(value: SelectValue): void {
-    this.accuracyQuery.set(value as AccuracyLevel | '');
-    void this.refresh(this.version, { table: true, page: 1 });
+  protected filterAccuracy(values: SelectValue[]): void {
+    this.accuracyQuery.set(values as AccuracyLevel[]);
+    this.scheduleRefresh();
   }
 
   protected toggleSort(column: SortColumn): void {
@@ -303,7 +304,7 @@ export class Products {
     this.lastTo.set('');
     this.soldFrom.set('');
     this.soldTo.set('');
-    this.accuracyQuery.set('');
+    this.accuracyQuery.set([]);
     this.page.set(1);
     this.sortColumn.set('sold');
     this.sortDirection.set('desc');

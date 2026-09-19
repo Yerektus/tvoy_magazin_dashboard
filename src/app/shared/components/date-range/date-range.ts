@@ -4,6 +4,7 @@ import {
   ElementRef,
   Injector,
   afterNextRender,
+  booleanAttribute,
   computed,
   effect,
   inject,
@@ -82,6 +83,8 @@ export class DateRange {
   readonly from = input('');
   /** Применённый конец периода `YYYY-MM-DD` (или пусто). */
   readonly to = input('');
+  /** Крестик на поле: без него период только меняют календарём. */
+  readonly clearable = input(true, { transform: booleanAttribute });
   /** Период применили вторым кликом по дню или сбросили крестиком. */
   readonly rangeChange = output<DateRangeValue>();
 

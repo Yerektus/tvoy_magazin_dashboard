@@ -2,6 +2,7 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  booleanAttribute,
   computed,
   effect,
   inject,
@@ -11,7 +12,7 @@ import {
 } from '@angular/core';
 import { Chart, ChartConfiguration, ChartData, Plugin, TooltipItem } from 'chart.js/auto';
 
-import { formatAmount } from '../../models/plan';
+import { formatAmount, formatMoney, isWholeMeasure, wholeDays } from '../../models/plan';
 import { type DailySold } from '../../models/product';
 import {
   AMBER,
@@ -56,6 +57,7 @@ export class SalesForecastChart {
   readonly history = input<readonly DailySold[]>([]);
   readonly forecast = input<readonly DailySold[]>([]);
   readonly measure = input('');
+  readonly money = input(false, { transform: booleanAttribute });
 
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('chart');
   private chart: Chart<'line'> | undefined;
@@ -64,8 +66,15 @@ export class SalesForecastChart {
 
   protected readonly forecastDays = computed(() => {
     const lastHistory = this.history().at(-1);
+    const rows = this.forecast().filter((row) => !lastHistory || row.date > lastHistory.date);
 
-    return this.forecast().filter((row) => !lastHistory || row.date > lastHistory.date);
+    if (!isWholeMeasure(this.measure()) || rows.length === 0) {
+      return rows;
+    }
+
+    const counts = wholeDays(rows.map(soldOf));
+
+    return rows.map((row, index) => ({ ...row, sold: String(counts[index] ?? 0) }));
   });
 
   protected readonly showsFact = computed(() => this.factDays().length > 0);
@@ -83,6 +92,10 @@ export class SalesForecastChart {
   );
 
   protected readonly caption = computed(() => {
+    if (this.money()) {
+      return 'График выручки';
+    }
+
     if (this.showsFact() && this.showsForecast()) {
       return 'График продаж и прогноза';
     }
@@ -98,13 +111,15 @@ export class SalesForecastChart {
     const datasets: ChartData<'line'>['datasets'] = [];
 
     if (history.length > 0) {
+      const keepZero = this.money();
+
       datasets.push({
         label: FACT_LABEL,
         data: [
           ...history.map((row) => {
             const value = soldOf(row);
 
-            return value > 0 ? value : null;
+            return keepZero || value > 0 ? value : null;
           }),
           ...forecast.map(() => null),
         ],
@@ -154,6 +169,7 @@ export class SalesForecastChart {
     const unit = this.measure();
     const labels = this.data().labels ?? [];
     const historyLen = this.factDays().length;
+    const money = this.money();
 
     return {
       responsive: true,
@@ -191,7 +207,11 @@ export class SalesForecastChart {
           callbacks: {
             title: (items) => (items[0] ? formatDay(String(items[0].label)) : ''),
             label: (item: TooltipItem<'line'>) => {
-              const value = formatAmount(String(item.parsed.y ?? ''));
+              if (money) {
+                return formatMoney(String(item.parsed.y ?? ''));
+              }
+
+              const value = formatAmount(String(item.parsed.y ?? ''), unit);
               const suffix = unit ? ` ${unit}` : '';
 
               return `${item.dataset.label}: ${value}${suffix}`;
@@ -223,7 +243,20 @@ export class SalesForecastChart {
             color: MUTED,
             font: { family: FONT, size: 11 },
             maxTicksLimit: 5,
-            callback: (value) => formatAmount(String(value)),
+            ...(isWholeMeasure(unit) ? { precision: 0 } : {}),
+            callback: (value) => {
+              if (money) {
+                return formatMoney(String(value));
+              }
+
+              const number = Number(value);
+
+              if (isWholeMeasure(unit) && !Number.isInteger(number)) {
+                return '';
+              }
+
+              return formatAmount(String(value), unit);
+            },
           },
         },
       },

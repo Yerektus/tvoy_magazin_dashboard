@@ -146,9 +146,10 @@ export class Planning implements ExtensionProvider {
     );
   }
 
-  /** Сводка продаж выбранного магазина за окно дней. */
-  async analytics(days = 30): Promise<SalesAnalytics> {
-    return this.request<SalesAnalytics>('get', `analytics/?days=${days}`);
+  /** Сводка продаж выбранного магазина за выбранные даты. */
+  async analytics(start: string, end: string): Promise<SalesAnalytics> {
+    const query = new URLSearchParams({ start, end });
+    return this.request<SalesAnalytics>('get', `analytics/?${query}`);
   }
 
   /** Забирает чеки из UMAG. Пока грузится — страница опрашивает `products()`. */
@@ -216,8 +217,8 @@ function productsQuery(query: ProductsQuery): string {
     params.set('sold_to', query.soldTo);
   }
 
-  if (query.accuracy) {
-    params.set('accuracy', query.accuracy);
+  if (query.accuracy?.length) {
+    params.set('accuracy', query.accuracy.join(','));
   }
 
   if (query.page) {

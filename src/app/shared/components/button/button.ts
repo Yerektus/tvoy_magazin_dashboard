@@ -4,7 +4,7 @@ import { Spinner } from '../spinner/spinner';
 
 export type ButtonType = 'button' | 'submit' | 'reset';
 export type ButtonVariant = 'default' | 'secondary' | 'primary' | 'outline' | 'ghost';
-export type ButtonSize = 'md' | 'lg';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const BASE =
   'rounded-sm text-sm font-medium whitespace-nowrap transition cursor-pointer focus:ring-0 focus:outline-none disabled:opacity-60';
@@ -21,6 +21,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
 
 /** Квадратная кнопка под одну иконку — без горизонтальных полей. */
 const ICON_SHAPE: Record<ButtonSize, string> = {
+  sm: 'inline-flex size-5 items-center justify-center',
   md: 'inline-flex size-8 items-center justify-center',
   lg: 'inline-flex size-10 items-center justify-center',
 };
@@ -46,7 +47,7 @@ export class Button {
   readonly loading = input(false);
   /** Внутри только иконка — тогда поля одинаковые со всех сторон. */
   readonly icon = input(false);
-  /** `lg` — крупнее нажимаемая область, иконка того же размера. */
+  /** `sm` — в строке таблицы, `lg` — крупнее нажимаемая область. Иконка того же размера. */
   readonly size = input<ButtonSize>('md');
   readonly ariaLabel = input('');
   readonly ariaExpanded = input<boolean | null>(null);

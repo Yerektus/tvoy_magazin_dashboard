@@ -80,118 +80,130 @@
     </p>
   }
 
-  <div class="flex flex-col gap-4" [class.opacity-50]="pending()">
+  <div class="flex min-w-0 flex-col gap-4" [class.opacity-50]="pending()">
+    <div class="w-52 sm:w-60" [class.pointer-events-none]="pending()">
+      <app-date-range
+        [from]="from()"
+        [to]="to()"
+        [clearable]="false"
+        (rangeChange)="setRange($event)"
+      />
+    </div>
+
     <section class="rounded-md border border-neutral-200 bg-white">
-      <div
-        class="flex flex-col gap-3 border-b border-neutral-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5"
-      >
+      <div class="border-b border-neutral-200 px-4 py-3 sm:px-5">
         <h2 class="text-base font-medium text-neutral-900">Итоги</h2>
-        <app-select
-          class="w-40"
-          [options]="periods"
-          [value]="days()"
-          ariaLabel="Период"
-          (selected)="setDays($event)"
-        />
       </div>
 
       <div class="p-4 sm:p-5">
         <div class="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:gap-x-12">
-          <app-stat-card label="Товаров">
-            {{ snapshot().sku_count.toLocaleString('ru-RU') }}
-          </app-stat-card>
-
-          <app-stat-card label="Дней с продажами">
-            {{ snapshot().active_days }} из {{ snapshot().days }}
-          </app-stat-card>
-
-          <app-stat-card label="Со скидкой">
-            @if (snapshot().promo_share === null) {
+          <app-stat-card label="Выручка">
+            @if (snapshot().revenue === null) {
               <span class="text-neutral-400">—</span>
             } @else {
-              {{ formatShare(snapshot().promo_share) }}
+              {{ formatMoney(snapshot().revenue) }}
             }
           </app-stat-card>
 
-          <app-stat-card label="К прошлому периоду">
-            @if (snapshot().trend === null) {
+          <app-stat-card label="Прибыль">
+            @if (snapshot().profit === null) {
               <span class="text-neutral-400">—</span>
             } @else {
-              {{ formatChange(snapshot().trend) }}
+              {{ formatMoney(snapshot().profit) }}
+            }
+          </app-stat-card>
+
+          <app-stat-card label="Посетителей">
+            @if (snapshot().visitors === null) {
+              <span class="text-neutral-400">—</span>
+            } @else {
+              {{ snapshot().visitors?.toLocaleString('ru-RU') }}
+            }
+          </app-stat-card>
+
+          <app-stat-card label="Средний чек">
+            @if (snapshot().average_check === null) {
+              <span class="text-neutral-400">—</span>
+            } @else {
+              {{ formatMoney(snapshot().average_check) }}
             }
           </app-stat-card>
         </div>
       </div>
     </section>
 
-    <section class="rounded-md border border-neutral-200 bg-white">
+    <section class="min-w-0 rounded-md border border-neutral-200 bg-white">
       <div class="border-b border-neutral-200 px-4 py-3 sm:px-5">
-        <h2 class="text-base font-medium text-neutral-900">Продажи по дням</h2>
+        <h2 class="text-base font-medium text-neutral-900">Выручка</h2>
       </div>
 
       <div class="p-4 sm:p-5">
-        <app-sales-forecast-chart [history]="snapshot().history" />
+        <app-sales-forecast-chart [history]="revenueHistory()" money />
       </div>
     </section>
 
-    <div class="grid gap-4 lg:grid-cols-2">
-      <section class="rounded-md border border-neutral-200 bg-white">
+    <!-- grid-cols-1 с minmax(0,1fr): иначе сетка тянется по 24 часам и обрезает оба графика. -->
+    <div class="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-5">
+      <section class="min-w-0 rounded-md border border-neutral-200 bg-white xl:col-span-3">
+        <div class="border-b border-neutral-200 px-4 py-3 sm:px-5">
+          <h2 class="text-base font-medium text-neutral-900">По времени</h2>
+        </div>
+
+        <div class="min-w-0 p-4 sm:p-5">
+          <app-sales-bar-chart
+            [labels]="hourLabels()"
+            [values]="hourValues()"
+            [titles]="hourTitles()"
+            caption="Продажи по часам"
+            scrollable
+          />
+        </div>
+      </section>
+
+      <section class="min-w-0 overflow-hidden rounded-md border border-neutral-200 bg-white xl:col-span-2">
         <div class="border-b border-neutral-200 px-4 py-3 sm:px-5">
           <h2 class="text-base font-medium text-neutral-900">По дням недели</h2>
         </div>
 
+        <div class="min-w-0 p-4 sm:p-5">
+          <app-sales-bar-chart
+            [labels]="weekdayLabels()"
+            [values]="weekdayValues()"
+            caption="Продажи по дням недели"
+          />
+        </div>
+      </section>
+    </div>
+
+    @if (snapshot().categories.length) {
+      <section class="rounded-md border border-neutral-200 bg-white">
+        <div class="border-b border-neutral-200 px-4 py-3 sm:px-5">
+          <h2 class="text-base font-medium text-neutral-900">Категории</h2>
+        </div>
+
         <div class="flex flex-col gap-2 p-4 sm:p-5">
-          @for (row of snapshot().weekdays; track row.weekday) {
+          @for (row of snapshot().categories; track row.name) {
             <div class="flex items-center gap-3">
-              <span class="w-8 shrink-0 text-sm text-neutral-500">{{
-                weekdayLabel(row.weekday)
-              }}</span>
-              <div class="h-8 min-w-0 flex-1 overflow-hidden rounded-md bg-neutral-100">
-                @if (share(row.sold, weekdayMax()) > 0) {
-                  <div
-                    class="h-full rounded-md bg-[#C5DFD9]"
-                    [style.width.%]="share(row.sold, weekdayMax())"
-                  ></div>
-                }
+              <div class="min-w-0 flex-1">
+                <div class="mb-1 flex items-baseline justify-between gap-2">
+                  <span class="truncate text-sm text-neutral-800">{{ row.name }}</span>
+                  <span class="shrink-0 text-sm text-neutral-800">
+                    {{ formatAmount(row.sold) }}
+                  </span>
+                </div>
+                <div class="h-8 overflow-hidden rounded-md bg-neutral-100">
+                  @if (share(row.sold, categoryMax()) > 0) {
+                    <div
+                      class="h-full rounded-md bg-[#C5DFD9]"
+                      [style.width.%]="share(row.sold, categoryMax())"
+                    ></div>
+                  }
+                </div>
               </div>
-              <span class="w-16 shrink-0 text-right text-sm text-neutral-800">
-                {{ formatAmount(row.sold) }}
-              </span>
             </div>
           }
         </div>
       </section>
-
-      @if (snapshot().categories.length) {
-        <section class="rounded-md border border-neutral-200 bg-white">
-          <div class="border-b border-neutral-200 px-4 py-3 sm:px-5">
-            <h2 class="text-base font-medium text-neutral-900">Категории</h2>
-          </div>
-
-          <div class="flex flex-col gap-2 p-4 sm:p-5">
-            @for (row of snapshot().categories; track row.name) {
-              <div class="flex items-center gap-3">
-                <div class="min-w-0 flex-1">
-                  <div class="mb-1 flex items-baseline justify-between gap-2">
-                    <span class="truncate text-sm text-neutral-800">{{ row.name }}</span>
-                    <span class="shrink-0 text-sm text-neutral-800">
-                      {{ formatAmount(row.sold) }}
-                    </span>
-                  </div>
-                  <div class="h-8 overflow-hidden rounded-md bg-neutral-100">
-                    @if (share(row.sold, categoryMax()) > 0) {
-                      <div
-                        class="h-full rounded-md bg-[#C5DFD9]"
-                        [style.width.%]="share(row.sold, categoryMax())"
-                      ></div>
-                    }
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-        </section>
-      }
-    </div>
+    }
   </div>
 }

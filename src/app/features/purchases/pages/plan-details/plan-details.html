@@ -237,11 +237,12 @@
     <ng-template #accuracyFilterTpl>
       <app-select
         compact
+        multiple
         placeholder="Все"
         ariaLabel="Точность прогноза"
         [options]="accuracyOptions"
         [value]="accuracyFilter()"
-        (selected)="filterAccuracy($event)"
+        (selectedValues)="filterAccuracy($event)"
       />
     </ng-template>
 
@@ -400,9 +401,9 @@
       let-item
     >
       <p [class]="isOut(item) ? 'text-red-600' : ''">
-        {{ formatAmount(item.stock) }} {{ item.measure }}
+        {{ formatAmount(item.stock, item.measure) }} {{ item.measure }}
       </p>
-      <p class="mt-0.5 text-neutral-400">{{ formatAmount(item.per_day) }} в день</p>
+      <p class="mt-0.5 text-neutral-400">{{ formatAmount(item.per_day, item.measure) }} в день</p>
     </ng-template>
 
     <ng-template
@@ -429,7 +430,7 @@
       align="right"
       let-item
     >
-      <span class="font-medium">{{ formatAmount(item.suggested) }} {{ item.measure }}</span>
+      <span class="font-medium">{{ formatAmount(item.suggested, item.measure) }} {{ item.measure }}</span>
     </ng-template>
 
     <ng-template

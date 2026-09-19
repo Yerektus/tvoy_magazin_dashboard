@@ -1,5 +1,5 @@
-<div class="min-h-dvh bg-white">
-  <div class="flex">
+<div class="min-h-dvh bg-white max-lg:h-dvh max-lg:overflow-hidden">
+  <div class="flex max-lg:h-full">
     <app-sidebar
       [items]="nav()"
       [loading]="navLoading()"
@@ -18,13 +18,16 @@
         (click)="sidebarOpen.set(false)"
       ></div>
     }
-    <div class="min-w-0 flex-1">
+    <!-- На телефоне скроллится только main: шапка остаётся на месте, как fixed. -->
+    <div class="min-w-0 flex-1 max-lg:flex max-lg:h-full max-lg:min-h-0 max-lg:flex-col">
       <app-header
         [title]="pageTitle()"
         [sidebarOpen]="sidebarOpen()"
         (toggleSidebar)="sidebarOpen.set(!sidebarOpen())"
       />
-      <main class="min-w-0 px-4 py-6 sm:px-6">
+      <main
+        class="min-w-0 px-4 py-6 sm:px-6 max-lg:min-h-0 max-lg:flex-1 max-lg:overflow-y-auto max-lg:overscroll-y-contain"
+      >
         <router-outlet />
       </main>
     </div>

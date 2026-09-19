@@ -18,7 +18,12 @@
   [disabled]="disabled()"
   (click)="toggle()"
 >
-  <span class="truncate" [class.text-neutral-400]="empty()">{{ label() }}</span>
+  <span
+    class="truncate"
+    [class.text-neutral-400]="empty()"
+    [attr.title]="empty() ? null : label()"
+    >{{ label() }}</span
+  >
 
   <app-icon [icon]="chevronIcon" [size]="compact() ? 14 : 16" class="shrink-0 text-neutral-400" />
 </button>
@@ -27,6 +32,7 @@
   <div
     #panel
     role="listbox"
+    [attr.aria-multiselectable]="multiple() ? true : null"
     class="animate-fade-in fixed z-50 max-h-64 overflow-y-auto rounded-md border border-neutral-200 bg-white py-1 shadow-lg motion-reduce:animate-none"
     [style.top.px]="position().top"
     [style.left.px]="position().left"
@@ -36,13 +42,28 @@
       <button
         type="button"
         role="option"
-        class="flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-1.5 text-left text-sm transition hover:bg-neutral-100"
-        [attr.aria-selected]="option.value === value()"
+        class="flex w-full cursor-pointer items-center gap-3 px-3 py-1.5 text-left text-sm transition hover:bg-neutral-100"
+        [class.justify-between]="!multiple()"
+        [attr.aria-selected]="isSelected(option)"
         (click)="choose(option)"
       >
+        @if (multiple()) {
+          <span
+            class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border"
+            [class.border-neutral-300]="!isSelected(option)"
+            [class.border-blue-500]="isSelected(option)"
+            [class.bg-blue-500]="isSelected(option)"
+            [class.bg-white]="!isSelected(option)"
+          >
+            @if (isSelected(option)) {
+              <app-icon [icon]="checkIcon" [size]="12" [strokeWidth]="3" class="text-white" />
+            }
+          </span>
+        }
+
         <span class="truncate">{{ option.label }}</span>
 
-        @if (option.value === value()) {
+        @if (!multiple() && isSelected(option)) {
           <app-icon [icon]="checkIcon" [size]="14" class="shrink-0 text-blue-600" />
         }
       </button>

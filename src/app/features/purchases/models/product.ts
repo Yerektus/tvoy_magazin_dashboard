@@ -10,10 +10,11 @@ export interface StoreProduct {
   forecast_error: string | null;
 }
 
-/** День на графике: сколько ушло с полки. */
+/** День на графике: сколько ушло с полки. На сводке магазина ещё и выручка. */
 export interface DailySold {
   date: string;
   sold: string;
+  revenue?: string | null;
 }
 
 /** Прогноз спроса на горизонт закупа. */
@@ -61,7 +62,7 @@ export interface ProductsQuery {
   lastTo?: string;
   soldFrom?: string;
   soldTo?: string;
-  accuracy?: 'high' | 'medium' | 'low' | 'none' | '';
+  accuracy?: ('high' | 'medium' | 'low' | 'none')[];
 }
 
 export const emptyProducts = (): ProductsSnapshot => ({

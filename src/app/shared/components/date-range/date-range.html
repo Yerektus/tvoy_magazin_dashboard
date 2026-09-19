@@ -20,7 +20,7 @@
     {{ label() || 'От - До' }}
   </span>
 
-  @if (label()) {
+  @if (label() && clearable()) {
     <button
       type="button"
       aria-label="Очистить даты"

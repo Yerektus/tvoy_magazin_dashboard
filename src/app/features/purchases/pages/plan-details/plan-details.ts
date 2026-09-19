@@ -76,7 +76,8 @@ const HINT_FADE_MS = 400;
 /** Сколько строк на одной странице таблицы. */
 const PAGE_SIZE = 50;
 
-type SortColumn = 'name' | 'barcode' | 'supplier' | 'stock' | 'cover' | 'suggested' | 'cost' | 'accuracy';
+type SortColumn =
+  'name' | 'barcode' | 'supplier' | 'stock' | 'cover' | 'suggested' | 'cost' | 'accuracy';
 type SortDirection = 'asc' | 'desc';
 
 const ACCURACY_ORDER: Record<AccuracyLevel, number> = {
@@ -165,7 +166,7 @@ export class PlanDetails {
   protected readonly query = signal('');
   protected readonly barcodeQuery = signal('');
   protected readonly supplierQuery = signal('');
-  protected readonly accuracyFilter = signal<AccuracyLevel | ''>('');
+  protected readonly accuracyFilter = signal<AccuracyLevel[]>([]);
   protected readonly stockFrom = signal('');
   protected readonly stockTo = signal('');
   protected readonly coverFrom = signal('');
@@ -236,7 +237,7 @@ export class PlanDetails {
         return false;
       }
 
-      if (accuracy && accuracyLevel(item.forecast_error) !== accuracy) {
+      if (accuracy.length && !accuracy.includes(accuracyLevel(item.forecast_error))) {
         return false;
       }
 
@@ -398,8 +399,8 @@ export class PlanDetails {
     this.page.set(1);
   }
 
-  protected filterAccuracy(value: SelectValue): void {
-    this.accuracyFilter.set(value as AccuracyLevel | '');
+  protected filterAccuracy(values: SelectValue[]): void {
+    this.accuracyFilter.set(values as AccuracyLevel[]);
     this.page.set(1);
   }
 
@@ -433,7 +434,10 @@ export class PlanDetails {
         ? this.sortDirection() === 'asc'
           ? 'desc'
           : 'asc'
-        : column === 'name' || column === 'barcode' || column === 'supplier' || column === 'accuracy'
+        : column === 'name' ||
+            column === 'barcode' ||
+            column === 'supplier' ||
+            column === 'accuracy'
           ? 'asc'
           : 'desc';
 
@@ -637,7 +641,7 @@ export class PlanDetails {
       this.query.set('');
       this.barcodeQuery.set('');
       this.supplierQuery.set('');
-      this.accuracyFilter.set('');
+      this.accuracyFilter.set([]);
       this.stockFrom.set('');
       this.stockTo.set('');
       this.coverFrom.set('');
@@ -716,7 +720,11 @@ function supplierName(item: PurchasePlanItem): string {
   return item.supplier || UNKNOWN_SUPPLIER;
 }
 
-function compareItems(first: PurchasePlanItem, second: PurchasePlanItem, column: SortColumn): number {
+function compareItems(
+  first: PurchasePlanItem,
+  second: PurchasePlanItem,
+  column: SortColumn,
+): number {
   if (column === 'name') {
     return first.name.localeCompare(second.name, 'ru');
   }
@@ -730,11 +738,17 @@ function compareItems(first: PurchasePlanItem, second: PurchasePlanItem, column:
   }
 
   if (column === 'accuracy') {
-    return ACCURACY_ORDER[accuracyLevel(first.forecast_error)] - ACCURACY_ORDER[accuracyLevel(second.forecast_error)];
+    return (
+      ACCURACY_ORDER[accuracyLevel(first.forecast_error)] -
+      ACCURACY_ORDER[accuracyLevel(second.forecast_error)]
+    );
   }
 
   if (column === 'cover') {
-    return Number(first.cover_days ?? Number.POSITIVE_INFINITY) - Number(second.cover_days ?? Number.POSITIVE_INFINITY);
+    return (
+      Number(first.cover_days ?? Number.POSITIVE_INFINITY) -
+      Number(second.cover_days ?? Number.POSITIVE_INFINITY)
+    );
   }
 
   return Number(first[column] ?? 0) - Number(second[column] ?? 0);

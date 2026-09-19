@@ -72,7 +72,8 @@ export class ProductDetails {
   /** Штрихкод из `/products/:barcode`. */
   readonly barcode = input.required<string>();
 
-  protected readonly formatAmount = formatAmount;
+  protected readonly formatAmount = (value: string | number | null) =>
+    formatAmount(value, this.product()?.measure);
   protected readonly formatChange = formatChange;
   protected readonly formatDate = formatDate;
   protected readonly formatError = formatError;

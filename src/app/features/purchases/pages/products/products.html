@@ -176,11 +176,12 @@
     <ng-template #accuracyFilterTpl>
       <app-select
         compact
+        multiple
         placeholder="Все"
         ariaLabel="Точность прогноза"
         [options]="accuracyOptions"
         [value]="accuracyQuery()"
-        (selected)="filterAccuracy($event)"
+        (selectedValues)="filterAccuracy($event)"
       />
     </ng-template>
 
@@ -227,11 +228,7 @@
     </ng-template>
 
     <ng-template #lastFilter>
-      <app-date-range
-        [from]="lastFrom()"
-        [to]="lastTo()"
-        (rangeChange)="filterLastRange($event)"
-      />
+      <app-date-range [from]="lastFrom()" [to]="lastTo()" (rangeChange)="filterLastRange($event)" />
     </ng-template>
 
     <ng-template
@@ -279,7 +276,7 @@
       let-product
     >
       <span
-        >{{ formatAmount(product.sold) }}{{ product.measure ? ' ' + product.measure : '' }}</span
+        >{{ formatAmount(product.sold, product.measure) }}{{ product.measure ? ' ' + product.measure : '' }}</span
       >
     </ng-template>
 
