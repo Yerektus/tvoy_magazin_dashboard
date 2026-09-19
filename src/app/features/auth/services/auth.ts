@@ -18,6 +18,8 @@ export interface AuthUser {
   organization: Organization;
   /** Владелец и администратор ведут организацию, менеджер — только работает. */
   manages_organization: boolean;
+  /** Показывать ли помощника: владельцу и администратору всегда, менеджеру — если выдали. */
+  uses_assistant?: boolean;
 }
 
 interface LoginResponse {
@@ -56,6 +58,15 @@ export class Auth {
   readonly isAuthenticated = computed(() => this.accessToken() !== null);
   /** Показывать ли то, чем ведут организацию: расширения и дальше настройки. */
   readonly managesOrganization = computed(() => this.currentUser()?.manages_organization === true);
+  /** Кнопка помощника в шапке: без доступа сервер на чат не пустит. */
+  readonly usesAssistant = computed(() => {
+    const user = this.currentUser();
+    if (!user) {
+      return false;
+    }
+
+    return user.uses_assistant ?? user.manages_organization;
+  });
 
   token(): string | null {
     return this.accessToken();

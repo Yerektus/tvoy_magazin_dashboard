@@ -31,5 +31,14 @@
         <router-outlet />
       </main>
     </div>
+
+    @if (assistant.open()) {
+      <div
+        class="animate-fade-in fixed inset-0 z-40 bg-neutral-900/30 lg:hidden"
+        (click)="assistant.close()"
+      ></div>
+    }
+
+    <app-chat-sidebar />
   </div>
 </div>

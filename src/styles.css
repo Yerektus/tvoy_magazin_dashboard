@@ -32,6 +32,8 @@
      пока доигрывает уход. */
   --animate-hint-in: hint-in 400ms ease-out;
   --animate-hint-out: hint-out 400ms ease-in forwards;
+  --animate-chat-dot: chat-dot 900ms ease-in-out infinite;
+  --animate-chat-in: hint-in 400ms ease-out;
 }
 
 @keyframes fade-in {
@@ -88,5 +90,20 @@
   to {
     opacity: 0;
     transform: translateY(-8px);
+  }
+}
+
+/* Точки «пишет ответ»: по очереди вспыхивают и чуть поднимаются. */
+@keyframes chat-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
   }
 }

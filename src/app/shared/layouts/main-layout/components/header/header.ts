@@ -2,6 +2,8 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input, output } from '@angular/core';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide';
 
+import { Assistant } from '../../../../../features/assistant/services/assistant';
+import { Auth } from '../../../../../features/auth/services/auth';
 import { Breadcrumbs } from '../../../../components/breadcrumbs/breadcrumbs';
 import { Button } from '../../../../components/button/button';
 import { Icon } from '../../../../components/icon/icon';
@@ -27,6 +29,11 @@ export class Header {
 
   /** Крошки, табы и действия справа объявляет открытая страница. */
   protected readonly page = inject(PageHeader);
+  private readonly auth = inject(Auth);
+  protected readonly assistant = inject(Assistant);
+
+  /** Помощник только тем, кому сервер его открыл. */
+  protected readonly canChat = computed(() => this.auth.usesAssistant());
 
   protected readonly menuIcon = computed(() =>
     this.sidebarOpen() ? PanelLeftClose : PanelLeftOpen,

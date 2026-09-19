@@ -1,0 +1,289 @@
+<div
+  class="flex h-full min-w-0 w-full flex-col"
+  [class.opacity-0]="!ready()"
+  [class.pointer-events-none]="!ready()"
+  [class.animate-fade-in]="ready()"
+  [class.motion-reduce:animate-none]="true"
+>
+  <button
+    type="button"
+    class="absolute inset-y-0 left-0 z-10 hidden w-1.5 cursor-col-resize touch-none bg-transparent hover:bg-blue-400/40 lg:block"
+    [class.bg-blue-400/40]="dragging()"
+    aria-label="Изменить ширину панели"
+    (pointerdown)="startResize($event)"
+    (pointermove)="onResize($event)"
+    (pointerup)="endResize()"
+    (pointercancel)="endResize()"
+    (dblclick)="resetWidth()"
+  ></button>
+  <div class="flex h-14 shrink-0 items-center gap-2 px-4 lg:px-3">
+    @if (view() === 'history') {
+      <span class="lg:hidden">
+        <app-button
+          variant="secondary"
+          size="lg"
+          [icon]="true"
+          ariaLabel="К разговору"
+          (click)="backToChat()"
+        >
+          <app-icon [icon]="backIcon" />
+        </app-button>
+      </span>
+      <span class="hidden lg:contents">
+        <app-button variant="ghost" [icon]="true" ariaLabel="К разговору" (click)="backToChat()">
+          <app-icon [icon]="backIcon" [size]="18" />
+        </app-button>
+      </span>
+      <span class="min-w-0 flex-1 truncate text-md font-normal">История</span>
+    } @else {
+      <span class="min-w-0 flex-1 truncate text-md font-normal lg:px-1">Помощник</span>
+    }
+
+    <span class="flex shrink-0 items-center gap-2 lg:hidden">
+      @if (view() === 'chat') {
+        <div
+          class="flex h-10 divide-x divide-neutral-200 overflow-hidden rounded-sm border border-neutral-200 [&_button]:h-10 [&_button]:w-auto [&_button]:px-5"
+        >
+          <app-button
+            variant="ghost"
+            size="lg"
+            [icon]="true"
+            ariaLabel="История разговоров"
+            (click)="showHistory()"
+          >
+            <app-icon [icon]="historyIcon" />
+          </app-button>
+          <app-button
+            variant="ghost"
+            size="lg"
+            [icon]="true"
+            ariaLabel="Новый разговор"
+            [disabled]="!assistant.messages().length"
+            (click)="startNew()"
+          >
+            <app-icon [icon]="newIcon" />
+          </app-button>
+        </div>
+      }
+      <app-button
+        variant="secondary"
+        size="lg"
+        [icon]="true"
+        ariaLabel="Закрыть"
+        (click)="assistant.close()"
+      >
+        <app-icon [icon]="closeIcon" />
+      </app-button>
+    </span>
+
+    <span class="hidden items-center gap-2 lg:flex">
+      @if (view() === 'chat') {
+        <div
+          class="flex divide-x divide-neutral-200 overflow-hidden rounded-sm border border-neutral-200"
+        >
+          <app-button variant="ghost" [icon]="true" ariaLabel="История разговоров" (click)="showHistory()">
+            <app-icon [icon]="historyIcon" [size]="16" />
+          </app-button>
+          <app-button
+            variant="ghost"
+            [icon]="true"
+            ariaLabel="Новый разговор"
+            [disabled]="!assistant.messages().length"
+            (click)="startNew()"
+          >
+            <app-icon [icon]="newIcon" [size]="16" />
+          </app-button>
+        </div>
+      }
+      <div class="overflow-hidden rounded-sm border border-neutral-200">
+        <app-button variant="ghost" [icon]="true" ariaLabel="Закрыть" (click)="assistant.close()">
+          <app-icon [icon]="closeIcon" [size]="16" />
+        </app-button>
+      </div>
+    </span>
+  </div>
+
+  @if (view() === 'history') {
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      @if (historyLoading()) {
+        <div class="flex justify-center py-10 text-neutral-400">
+          <app-spinner [size]="20" />
+        </div>
+      } @else if (!assistant.chats().length) {
+        <p class="px-6 py-10 text-center text-sm text-neutral-500">Пока нет прошлых разговоров</p>
+      } @else {
+        <ul class="flex flex-col py-1">
+          @for (chat of assistant.chats(); track chat.id) {
+            <li
+              class="flex items-start hover:bg-neutral-50"
+              [class.bg-neutral-50]="chat.id === assistant.chatId()"
+            >
+              <button
+                type="button"
+                class="min-w-0 flex-1 cursor-pointer px-4 py-2.5 text-left"
+                (click)="openChat(chat.id)"
+              >
+                <span class="block truncate text-sm text-neutral-900">{{ chatName(chat) }}</span>
+                <span class="mt-0.5 block text-xs text-neutral-400">{{
+                  formatSentAt(chat.updated_at)
+                }}</span>
+              </button>
+              <span class="shrink-0 pr-2 pt-2">
+                <app-button
+                  variant="ghost"
+                  size="sm"
+                  [icon]="true"
+                  ariaLabel="Удалить"
+                  (click)="removeChat($event, chat)"
+                >
+                  <app-icon [icon]="removeIcon" [size]="14" />
+                </app-button>
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  } @else if (assistant.error(); as message) {
+    <div class="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+      <p class="text-sm text-neutral-500">{{ message }}</p>
+      <app-button variant="outline" (click)="retry()">Повторить</app-button>
+    </div>
+  } @else if (assistant.loading() && !assistant.messages().length) {
+    <div class="flex min-h-0 flex-1 items-center justify-center text-neutral-400">
+      <app-spinner [size]="20" />
+    </div>
+  } @else {
+    <div #thread class="min-h-0 flex-1 overflow-y-auto">
+      @if (!assistant.messages().length) {
+        <div class="flex h-full flex-col items-center justify-center px-6 text-center">
+          <p class="text-lg font-medium text-neutral-900">Спросите про магазин</p>
+        </div>
+      } @else {
+        <div class="flex flex-col py-2">
+          @for (message of assistant.messages(); track message.id) {
+            @if (message.role === 'user') {
+              <div
+                class="px-4 py-4 text-sm leading-5 break-words text-neutral-900 motion-reduce:animate-none"
+                [class.animate-chat-in]="message.id === sendingId()"
+              >
+                @if (message.image) {
+                  <img
+                    [src]="message.image"
+                    alt=""
+                    class="mb-2 max-h-40 rounded-md object-cover"
+                  />
+                }
+                @if (message.text) {
+                  <p class="whitespace-pre-wrap">{{ message.text }}</p>
+                }
+              </div>
+            } @else {
+              <div
+                class="bg-neutral-100 px-4 py-4 motion-reduce:animate-none"
+                [class.animate-chat-in]="message.id === arrivingId()"
+              >
+                <div class="mb-2.5 flex items-center gap-1.5">
+                  <svg
+                    class="size-3.5 text-violet-500"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"
+                    />
+                  </svg>
+                  <span class="text-sm font-medium text-neutral-900">Помощник</span>
+                </div>
+                <app-chat-markdown [text]="message.text" />
+                @if ($last && !assistant.thinking() && message.suggestions; as questions) {
+                  @if (questions.length) {
+                    <div class="mt-2 flex flex-col gap-1">
+                      @for (question of questions; track question) {
+                        <button
+                          type="button"
+                          class="flex w-full cursor-pointer items-center gap-2 rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-left text-sm leading-5 text-neutral-900 hover:bg-neutral-50"
+                          (click)="askPrompt(question)"
+                        >
+                          <span class="min-w-0 flex-1">{{ question }}</span>
+                          <app-icon [icon]="promptIcon" [size]="16" class="text-neutral-400" />
+                        </button>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            }
+          }
+        </div>
+      }
+    </div>
+
+    @if (assistant.thinking()) {
+      <div
+        class="flex w-full shrink-0 items-center gap-2 bg-neutral-200 px-4 py-3 text-sm text-neutral-500"
+      >
+        <span class="flex gap-1" aria-hidden="true">
+          <span class="size-1.5 animate-chat-dot rounded-full bg-neutral-400"></span>
+          <span class="size-1.5 animate-chat-dot rounded-full bg-neutral-400 [animation-delay:150ms]"></span>
+          <span class="size-1.5 animate-chat-dot rounded-full bg-neutral-400 [animation-delay:300ms]"></span>
+        </span>
+        Помощник пишет ответ...
+      </div>
+    }
+
+    @if (starters().length) {
+      <div class="flex shrink-0 flex-col gap-1 px-3 pb-1">
+        @for (question of starters(); track question) {
+          <button
+            type="button"
+            class="flex w-full cursor-pointer items-center gap-2 rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-left text-sm leading-5 text-neutral-900 hover:bg-neutral-50"
+            (click)="askPrompt(question)"
+          >
+            <span class="min-w-0 flex-1">{{ question }}</span>
+            <app-icon [icon]="promptIcon" [size]="16" class="text-neutral-400" />
+          </button>
+        }
+      </div>
+    }
+
+    <div class="shrink-0 px-3 pt-2 pb-3">
+      @if (sendError(); as message) {
+        <p class="mb-2 px-1 text-xs text-red-600">{{ message }}</p>
+      }
+      @if (pageBadge(); as page) {
+        <span
+          class="mb-2 inline-flex max-w-full items-center gap-1 rounded-sm border border-neutral-200 bg-white px-2 py-0.5 text-xs text-neutral-600"
+          [attr.aria-label]="'Страница: ' + page"
+        >
+          <app-icon [icon]="pageIcon" [size]="12" />
+          <span class="truncate">{{ page }}</span>
+        </span>
+      }
+      <div
+        class="flex items-end gap-1 rounded-sm border border-neutral-200 bg-white px-2 py-1.5 hover:border-blue-400 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-400/20"
+      >
+        <textarea
+          #field
+          rows="1"
+          class="max-h-[120px] min-h-8 flex-1 resize-none bg-transparent py-1.5 text-sm outline-none placeholder:text-neutral-400 disabled:text-slate-400"
+          placeholder="Введите свой вопрос..."
+          [value]="assistant.draft()"
+          [disabled]="assistant.thinking()"
+          (input)="onDraft($event)"
+          (keydown)="onKey($event)"
+        ></textarea>
+        <app-button
+          variant="primary"
+          ariaLabel="Спросить"
+          [disabled]="!assistant.draft().trim() || assistant.thinking()"
+          (click)="send()"
+        >
+          Спросить
+        </app-button>
+      </div>
+    </div>
+  }
+</div>

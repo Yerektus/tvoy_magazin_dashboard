@@ -7,13 +7,15 @@ import { Auth } from '../../../features/auth/services/auth';
 import { Recognition } from '../../../features/documents/services/recognition';
 import { TargetPicker } from '../../../features/extensions/components/target-picker/target-picker';
 import { Planning } from '../../../features/purchases/services/planning';
+import { Assistant } from '../../../features/assistant/services/assistant';
+import { ChatSidebar } from '../../../features/assistant/components/chat-sidebar/chat-sidebar';
 import { Header } from './components/header/header';
 import { Sidebar, SidebarItem } from './components/sidebar/sidebar';
 
 /** Каркас внутренних страниц: хедер сверху, сайдбар слева, страница в `<router-outlet />`. */
 @Component({
   selector: 'app-main-layout',
-  imports: [RouterOutlet, Header, Sidebar, TargetPicker],
+  imports: [RouterOutlet, Header, Sidebar, TargetPicker, ChatSidebar],
   templateUrl: './main-layout.html',
 })
 export class MainLayout {
@@ -22,6 +24,7 @@ export class MainLayout {
   private readonly planning = inject(Planning);
   private readonly recognition = inject(Recognition);
   private readonly auth = inject(Auth);
+  protected readonly assistant = inject(Assistant);
 
   /**
    * Страницы от расширений появляются, только когда те подключены, а сам
@@ -79,6 +82,7 @@ export class MainLayout {
   protected logout(): void {
     // Токены стёрты сразу, а гашение refresh на сервере ждать незачем:
     // уводим на вход, не дожидаясь ответа.
+    this.assistant.reset();
     void this.auth.logout();
     this.router.navigateByUrl('/login');
   }
