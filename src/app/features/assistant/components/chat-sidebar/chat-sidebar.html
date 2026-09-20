@@ -198,6 +198,16 @@
                   <span class="text-sm font-medium text-neutral-900">Помощник</span>
                 </div>
                 <app-chat-markdown [text]="message.text" />
+                @if (message.file) {
+                  <a
+                    [href]="message.file"
+                    [download]="message.file_name || 'otchet.xlsx'"
+                    class="mt-3 flex cursor-pointer items-center gap-3 rounded-md border border-neutral-200 bg-white px-3 py-2.5 text-sm leading-5 text-neutral-900 hover:bg-neutral-50"
+                  >
+                    <app-icon [icon]="fileIcon" [size]="18" class="shrink-0 text-emerald-700" />
+                    <span class="min-w-0 flex-1 truncate">{{ message.file_name || 'Отчёт.xlsx' }}</span>
+                  </a>
+                }
                 @if ($last && !assistant.thinking() && message.suggestions; as questions) {
                   @if (questions.length) {
                     <div class="mt-2 flex flex-col gap-1">

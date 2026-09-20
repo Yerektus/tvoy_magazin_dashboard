@@ -16,6 +16,22 @@
   }
 }
 
+/* Выезд панели помощника. На телефоне — сдвиг, на большом экране — ширина,
+   чтобы страница рядом тоже ехала. Длительность продублирована в chat-sidebar.ts. */
+@utility chat-sidebar-motion {
+  transition-property: transform;
+  transition-duration: 300ms;
+  transition-timing-function: ease-out;
+
+  @media (min-width: 1024px) {
+    transition-property: width;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
 @theme {
   --font-sans:
     'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;

@@ -14,7 +14,7 @@ import {
 import { Chart, ChartConfiguration, ChartData, TooltipItem } from 'chart.js/auto';
 
 import { formatAmount } from '../../models/plan';
-import { BLUE, FONT, GRID, MUTED } from '../chart-theme';
+import { BLUE, BLUE_HOVER, FONT, GRID, MUTED } from '../chart-theme';
 
 const PX_PER_BAR = 56;
 const AXIS_GUTTER = 48;
@@ -59,7 +59,7 @@ export class SalesBarChart {
       {
         data: [...this.values()],
         backgroundColor: BLUE,
-        hoverBackgroundColor: '#3B91D4',
+        hoverBackgroundColor: BLUE_HOVER,
         borderRadius: 0,
         borderSkipped: false,
         categoryPercentage: 0.92,

@@ -2,6 +2,9 @@ import { type DailySold } from '../models/product';
 
 /** Общая палитра графиков товара: голубой — факт, оранжевый — прогноз. */
 export const BLUE = '#4BA3E8';
+export const BLUE_HOVER = '#3B91D4';
+export const BLUE_BAR = '#8EC4EE';
+export const BLUE_BAR_HOVER = '#74B4E8';
 export const AMBER = '#E08A3C';
 export const BLUE_RGB = [75, 163, 232] as const;
 export const AMBER_RGB = [224, 138, 60] as const;

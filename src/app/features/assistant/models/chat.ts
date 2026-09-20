@@ -4,6 +4,8 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
   image: string | null;
+  file: string | null;
+  file_name: string | null;
   created_at: string;
   /** Следующие вопросы к ответу аналитика — их нажимают, а не читают. */
   suggestions?: string[];

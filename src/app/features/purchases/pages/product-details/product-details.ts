@@ -25,6 +25,7 @@ import { type StoreProductDetail, FORECAST_MODEL_IDS, forecastModelLabel } from 
 import { Planning } from '../../services/planning';
 
 const HORIZONS: SelectOption[] = [
+  { value: 3, label: 'Прогноз на 3 дня' },
   { value: 7, label: 'Прогноз на неделю' },
   { value: 14, label: 'Прогноз на 2 недели' },
   { value: 30, label: 'Прогноз на месяц' },
@@ -95,7 +96,7 @@ export class ProductDetails {
   protected readonly horizon = signal(14);
   protected readonly historyDays = signal(60);
   protected readonly forecastModel = signal('auto');
-  protected readonly useSalesHistory = signal('no');
+  protected readonly useSalesHistory = signal('yes');
 
   private readonly planning = inject(Planning);
   private readonly umag = inject(Umag);

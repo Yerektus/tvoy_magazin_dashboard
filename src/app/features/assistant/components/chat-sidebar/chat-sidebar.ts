@@ -1,7 +1,7 @@
 import { Component, DestroyRef, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRouteSnapshot, NavigationEnd, Router } from '@angular/router';
-import { ArrowRight, ChevronLeft, List, MapPin, SquarePen, Trash2, X } from 'lucide';
+import { ArrowRight, ChevronLeft, FileSpreadsheet, List, MapPin, SquarePen, Trash2, X } from 'lucide';
 import { filter, map } from 'rxjs';
 
 import { Button } from '../../../../shared/components/button/button';
@@ -19,8 +19,8 @@ type PanelView = 'chat' | 'history';
 const WIDTH_KEY = 'assistant-sidebar-width';
 const DEFAULT_WIDTH = 384;
 const MIN_WIDTH = 320;
-/** Как `duration-200` у панели: чат показываем, только когда она доехала. */
-const OPEN_MS = 200;
+/** Как `chat-sidebar-motion` у панели: чат показываем, только когда она доехала. */
+const OPEN_MS = 300;
 
 /**
  * Правая панель разговора с аналитиком. Открывается с любой страницы кнопкой
@@ -35,7 +35,7 @@ const OPEN_MS = 200;
   templateUrl: './chat-sidebar.html',
   host: {
     class:
-      'fixed inset-y-0 right-0 z-50 w-full overflow-hidden bg-white transition-transform duration-200 ease-in-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:shrink-0 lg:transition-[width] motion-reduce:transition-none',
+      'chat-sidebar-motion fixed inset-y-0 right-0 z-50 w-full overflow-hidden bg-white lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-0 lg:shrink-0',
     '[class.translate-x-0]': 'assistant.open()',
     '[class.translate-x-full]': '!assistant.open()',
     '[class.lg:translate-x-0]': 'true',
@@ -94,6 +94,7 @@ export class ChatSidebar {
   protected readonly removeIcon = Trash2;
   protected readonly pageIcon = MapPin;
   protected readonly promptIcon = ArrowRight;
+  protected readonly fileIcon = FileSpreadsheet;
 
   private readonly routeUrl = toSignal(
     this.router.events.pipe(

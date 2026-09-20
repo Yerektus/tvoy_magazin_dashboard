@@ -27,6 +27,8 @@ export interface ProductForecast {
   error: string;
   observations: number;
   series: DailySold[];
+  /** Ожидание модели на тех же днях, что и продажи — линия поверх столбцов. */
+  fitted?: DailySold[];
 }
 
 /** Карточка товара: продажи и прогноз. */

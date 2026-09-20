@@ -230,6 +230,15 @@
               ariaLabel="Учитывать историю продаж"
               (selected)="setUseSalesHistory($event)"
             />
+            @if (useSalesHistory() === 'yes') {
+              <app-select
+                class="w-48"
+                [options]="historyOptions"
+                [value]="historyDays()"
+                ariaLabel="Период истории"
+                (selected)="setHistoryDays($event)"
+              />
+            }
           </div>
         </div>
 
@@ -242,6 +251,7 @@
             <app-sales-forecast-chart
               [history]="useSalesHistory() === 'yes' ? shownHistory() : []"
               [forecast]="forecast.series"
+              [fitted]="useSalesHistory() === 'yes' ? (forecast.fitted ?? []) : []"
               [measure]="current.measure"
             />
           </div>

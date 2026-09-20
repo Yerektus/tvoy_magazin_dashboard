@@ -135,6 +135,8 @@ export class Assistant {
       role: 'user',
       text: question,
       image: null,
+      file: null,
+      file_name: null,
       created_at: new Date().toISOString(),
     };
 
