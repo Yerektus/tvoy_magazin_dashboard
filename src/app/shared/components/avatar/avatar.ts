@@ -1,30 +1,59 @@
 import { Component, computed, input } from '@angular/core';
 
+export type AvatarSize = 'sm' | 'md';
+
 /**
- * Кружок с инициалами вместо фотографии: `<app-avatar [email]="user()" />`.
- * Фотографий у сотрудников нет, а узнавать себя в углу экрана всё равно нужно.
+ * Кружок с фото или инициалом: `<app-avatar [name]="user().name" />`.
+ * Фотографий у сотрудников пока нет — тогда одна буква имени. В меню
+ * слева имя часто пустое, там берём буквы из почты, как раньше.
  */
 @Component({
   selector: 'app-avatar',
-  template: '{{ initials() }}',
+  template: `
+    @if (src()) {
+      <img [src]="src()" alt="" class="size-full object-cover" />
+    } @else {
+      {{ initials() }}
+    }
+  `,
   host: {
-    class:
-      'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ' +
-      'bg-neutral-200 text-xs font-medium text-neutral-700 uppercase select-none',
-    '[attr.title]': 'email() || null',
+    '[class]': 'hostClass()',
+    '[attr.title]': 'title() || null',
     'aria-hidden': 'true',
   },
 })
 export class Avatar {
   readonly email = input('');
+  readonly name = input('');
+  /** Ссылка на фото. Пусто — рисуем инициал. */
+  readonly src = input('');
+  readonly size = input<AvatarSize>('md');
+
+  protected readonly title = computed(() => this.name().trim() || this.email() || null);
+
+  protected readonly hostClass = computed(() => {
+    const size = this.size() === 'sm' ? 'size-6 text-xs' : 'size-8 text-xs';
+
+    return (
+      'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full ' +
+      `bg-neutral-200 font-medium leading-none text-neutral-700 uppercase select-none ${size}`
+    );
+  });
 
   /**
-   * Первые буквы имени до собачки: «ivan.petrov@shop.kz» — «IP», а
-   * «shop@tvoymagazin.kz» — «S». Пусто — рисуем прочерк, а не пустой кружок.
+   * Одна буква имени: «Ержан» — «Е». Нет имени — первые буквы почты до
+   * собачки: «ivan.petrov@shop.kz» — «IP». Совсем пусто — прочерк, а не
+   * пустой кружок.
    */
   protected readonly initials = computed(() => {
-    const [name = ''] = this.email().split('@');
-    const parts = name.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+    const name = this.name().trim();
+
+    if (name) {
+      return name[0] ?? '—';
+    }
+
+    const [local = ''] = this.email().split('@');
+    const parts = local.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
 
     if (!parts.length) {
       return '—';

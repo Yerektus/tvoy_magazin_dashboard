@@ -38,6 +38,10 @@ export interface SalesAnalytics {
   profit: string | null;
   visitors: number | null;
   average_check: string | null;
+  revenue_trend: string | null;
+  profit_trend: string | null;
+  visitors_trend: string | null;
+  average_check_trend: string | null;
   history: DailySold[];
   weekdays: AnalyticsWeekday[];
   hours: AnalyticsHour[];
@@ -62,6 +66,10 @@ export const emptyAnalytics = (days = 30): SalesAnalytics => ({
   profit: null,
   visitors: null,
   average_check: null,
+  revenue_trend: null,
+  profit_trend: null,
+  visitors_trend: null,
+  average_check_trend: null,
   history: [],
   weekdays: [],
   hours: [],

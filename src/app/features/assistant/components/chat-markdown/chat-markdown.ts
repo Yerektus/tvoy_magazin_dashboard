@@ -8,38 +8,37 @@ export type MdBlock =
   | { type: 'table'; head: string[]; rows: string[][] };
 
 /**
+ * Жирный и обычный текст без пробелов из шаблона. У абзаца стоит
+ * `pre-wrap`, и перевод строки вокруг `{{ span.text }}` становился
+ * пустой строкой и отступом в начале ответа.
+ */
+@Component({
+  selector: 'app-md-spans',
+  template: `@for (span of spans(); track $index) {@if (span.bold) {<strong class="font-semibold">{{ span.text }}</strong>} @else {<span>{{ span.text }}</span>}}`,
+  host: { class: 'contents' },
+})
+export class MdSpans {
+  readonly spans = input.required<MdSpan[]>();
+}
+
+/**
  * Скупая разметка ответа аналитика: жирный, списки и таблицы. Чужой HTML
  * сюда не попадает — только текст, разобранный в блоки.
  */
 @Component({
   selector: 'app-chat-markdown',
+  imports: [MdSpans],
   template: `
-    <div class="flex flex-col gap-2 text-sm leading-5 break-words text-neutral-900">
+    <div class="flex flex-col gap-2 text-sm break-words text-neutral-900">
       @for (block of blocks(); track $index) {
         @switch (block.type) {
           @case ('p') {
-            <p class="whitespace-pre-wrap">
-              @for (span of block.spans; track $index) {
-                @if (span.bold) {
-                  <strong class="font-semibold">{{ span.text }}</strong>
-                } @else {
-                  {{ span.text }}
-                }
-              }
-            </p>
+            <p class="whitespace-pre-wrap"><app-md-spans [spans]="block.spans" /></p>
           }
           @case ('ul') {
             <ul class="flex list-disc flex-col gap-1 pl-4">
               @for (item of block.items; track $index) {
-                <li>
-                  @for (span of item; track $index) {
-                    @if (span.bold) {
-                      <strong class="font-semibold">{{ span.text }}</strong>
-                    } @else {
-                      {{ span.text }}
-                    }
-                  }
-                </li>
+                <li><app-md-spans [spans]="item" /></li>
               }
             </ul>
           }
@@ -83,7 +82,7 @@ export class ChatMarkdown {
 }
 
 export function parseMarkdown(text: string): MdBlock[] {
-  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const lines = text.replace(/\r\n/g, '\n').trim().split('\n');
   const blocks: MdBlock[] = [];
   let index = 0;
 

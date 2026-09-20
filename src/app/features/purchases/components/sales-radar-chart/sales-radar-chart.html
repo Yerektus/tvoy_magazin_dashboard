@@ -1,0 +1,9 @@
+@if (empty()) {
+  <div class="flex h-80 items-center justify-center text-sm text-neutral-400">
+    Недостаточно данных для графика
+  </div>
+} @else {
+  <div class="relative h-80 w-full">
+    <canvas #chart class="block h-full w-full" [attr.aria-label]="caption()"></canvas>
+  </div>
+}

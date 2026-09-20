@@ -21,12 +21,14 @@ import { Empty } from '../../../../shared/components/empty/empty';
 import { Icon } from '../../../../shared/components/icon/icon';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { StatCard } from '../../../../shared/components/stat-card/stat-card';
+import { StatTrend } from '../../../../shared/components/stat-trend/stat-trend';
 import { PageHeader } from '../../../../shared/services/page-header';
 import { Toasts } from '../../../../shared/services/toasts';
 import { Umag } from '../../../extensions/services/umag';
 import { soldOf } from '../../components/chart-theme';
 import { SalesBarChart } from '../../components/sales-bar-chart/sales-bar-chart';
 import { SalesForecastChart } from '../../components/sales-forecast-chart/sales-forecast-chart';
+import { SalesRadarChart } from '../../components/sales-radar-chart/sales-radar-chart';
 import { emptyAnalytics, type SalesAnalytics } from '../../models/analytics';
 import { formatAmount, formatMoney } from '../../models/plan';
 import { Planning } from '../../services/planning';
@@ -49,8 +51,10 @@ const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
     RouterLink,
     SalesBarChart,
     SalesForecastChart,
+    SalesRadarChart,
     Spinner,
     StatCard,
+    StatTrend,
   ],
   templateUrl: './sales.html',
   host: { class: 'block min-w-0' },
@@ -59,7 +63,6 @@ export class Sales {
   protected readonly syncIcon = RefreshCw;
   protected readonly formatAmount = formatAmount;
   protected readonly formatMoney = formatMoney;
-  protected readonly formatChange = formatChange;
 
   protected readonly snapshot = signal<SalesAnalytics>(emptyAnalytics());
   protected readonly from = signal(isoDaysAgo(DEFAULT_DAYS));
@@ -90,9 +93,10 @@ export class Sales {
     this.snapshot().weekdays.map((row) => WEEKDAYS[row.weekday] ?? ''),
   );
   protected readonly weekdayValues = computed(() => amounts(this.snapshot().weekdays));
-  protected readonly categoryMax = computed(() =>
-    maxSold(this.snapshot().categories.map((row) => row.sold)),
+  protected readonly categoryLabels = computed(() =>
+    this.snapshot().categories.map((row) => row.name),
   );
+  protected readonly categoryValues = computed(() => amounts(this.snapshot().categories));
   protected readonly revenueHistory = computed(() => {
     const rows = this.snapshot().history;
 
@@ -145,20 +149,6 @@ export class Sales {
     }
 
     void this.refresh(this.version, { pending: true });
-  }
-
-  protected share(value: string, max: number): number {
-    const amount = soldOf({ date: '', sold: value });
-
-    return max > 0 ? (amount / max) * 100 : 0;
-  }
-
-  protected formatShare(value: string | null): string {
-    if (value === null) {
-      return '—';
-    }
-
-    return formatChange(value, false);
   }
 
   protected async sync(): Promise<void> {
@@ -290,10 +280,6 @@ export class Sales {
   }
 }
 
-function maxSold(values: readonly string[]): number {
-  return values.reduce((max, value) => Math.max(max, soldOf({ date: '', sold: value })), 0);
-}
-
 function amounts(rows: readonly { sold: string }[]): number[] {
   return rows.map((row) => soldOf({ date: '', sold: row.sold }));
 }
@@ -302,27 +288,6 @@ function hourRange(hour: number): string {
   const stamp = `${String(hour).padStart(2, '0')}`;
 
   return `${stamp}:00–${stamp}:59`;
-}
-
-/** Доля или прирост: «12%», «+12%», «−8%». */
-function formatChange(value: string | number | null, signed = true): string {
-  if (value === null || value === '') {
-    return '—';
-  }
-
-  const amount = typeof value === 'number' ? value : Number(value);
-
-  if (!Number.isFinite(amount)) {
-    return '—';
-  }
-
-  const percent = Math.round(amount * 100);
-
-  if (!signed) {
-    return `${Math.abs(percent)}%`;
-  }
-
-  return `${percent > 0 ? '+' : percent < 0 ? '−' : ''}${Math.abs(percent)}%`;
 }
 
 function isoToday(): string {

@@ -3,6 +3,7 @@ import { type DailySold } from '../models/product';
 /** Общая палитра графиков товара: голубой — факт, оранжевый — прогноз. */
 export const BLUE = '#4BA3E8';
 export const BLUE_HOVER = '#3B91D4';
+export const BLUE_FILL = 'rgba(75, 163, 232, 0.18)';
 export const BLUE_BAR = '#8EC4EE';
 export const BLUE_BAR_HOVER = '#74B4E8';
 export const AMBER = '#E08A3C';
@@ -10,6 +11,8 @@ export const BLUE_RGB = [75, 163, 232] as const;
 export const AMBER_RGB = [224, 138, 60] as const;
 export const GRID = '#EEEEEE';
 export const MUTED = '#A3A3A3';
+/** Подписи осей, которые нужно прочитать: темнее делений. */
+export const LABEL = '#737373';
 export const FONT = 'Inter Variable, Inter, system-ui, sans-serif';
 
 export type Rgb = readonly [number, number, number];

@@ -1,6 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input, output } from '@angular/core';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide';
+import { Brain, PanelLeftClose, PanelLeftOpen } from 'lucide';
 
 import { Assistant } from '../../../../../features/assistant/services/assistant';
 import { Auth } from '../../../../../features/auth/services/auth';
@@ -41,4 +41,5 @@ export class Header {
   protected readonly menuLabel = computed(() =>
     this.sidebarOpen() ? 'Скрыть меню' : 'Показать меню',
   );
+  protected readonly chatIcon = Brain;
 }

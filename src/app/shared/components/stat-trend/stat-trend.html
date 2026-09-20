@@ -1,0 +1,9 @@
+@if (percent() !== null) {
+  <span class="inline-flex items-center gap-1.5">
+    <span [class]="tone()">
+      <app-icon [icon]="icon()" [size]="12" />
+      {{ absPercent() }}%
+    </span>
+    <span class="text-xs text-neutral-500">{{ caption() }}</span>
+  </span>
+}

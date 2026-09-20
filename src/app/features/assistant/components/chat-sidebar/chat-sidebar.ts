@@ -4,6 +4,8 @@ import { ActivatedRouteSnapshot, NavigationEnd, Router } from '@angular/router';
 import { ArrowRight, ChevronLeft, FileSpreadsheet, List, MapPin, SquarePen, Trash2, X } from 'lucide';
 import { filter, map } from 'rxjs';
 
+import { Auth } from '../../../auth/services/auth';
+import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Button } from '../../../../shared/components/button/button';
 import { Icon } from '../../../../shared/components/icon/icon';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
@@ -31,7 +33,7 @@ const OPEN_MS = 300;
  */
 @Component({
   selector: 'app-chat-sidebar',
-  imports: [Button, Icon, Spinner, ChatMarkdown],
+  imports: [Avatar, Button, Icon, Spinner, ChatMarkdown],
   templateUrl: './chat-sidebar.html',
   host: {
     class:
@@ -52,6 +54,7 @@ const OPEN_MS = 300;
 })
 export class ChatSidebar {
   protected readonly assistant = inject(Assistant);
+  private readonly auth = inject(Auth);
   private readonly confirm = inject(Confirm);
   private readonly toasts = inject(Toasts);
   private readonly destroyRef = inject(DestroyRef);
@@ -95,6 +98,16 @@ export class ChatSidebar {
   protected readonly pageIcon = MapPin;
   protected readonly promptIcon = ArrowRight;
   protected readonly fileIcon = FileSpreadsheet;
+
+  /**
+   * Имя над своим вопросом — как «Помощник» над ответом. Без него реплики
+   * сливаются: оба текста на всю ширину, и не сразу видно, чья это строка.
+   */
+  protected readonly senderName = computed(() => {
+    const name = this.auth.user()?.name.trim();
+
+    return name || 'Вы';
+  });
 
   private readonly routeUrl = toSignal(
     this.router.events.pipe(

@@ -103,6 +103,7 @@
             } @else {
               {{ formatMoney(snapshot().revenue) }}
             }
+            <app-stat-trend [value]="snapshot().revenue_trend" />
           </app-stat-card>
 
           <app-stat-card label="Прибыль">
@@ -111,6 +112,7 @@
             } @else {
               {{ formatMoney(snapshot().profit) }}
             }
+            <app-stat-trend [value]="snapshot().profit_trend" />
           </app-stat-card>
 
           <app-stat-card label="Посетителей">
@@ -119,6 +121,7 @@
             } @else {
               {{ snapshot().visitors?.toLocaleString('ru-RU') }}
             }
+            <app-stat-trend [value]="snapshot().visitors_trend" />
           </app-stat-card>
 
           <app-stat-card label="Средний чек">
@@ -127,6 +130,7 @@
             } @else {
               {{ formatMoney(snapshot().average_check) }}
             }
+            <app-stat-trend [value]="snapshot().average_check_trend" />
           </app-stat-card>
         </div>
       </div>
@@ -160,7 +164,9 @@
         </div>
       </section>
 
-      <section class="min-w-0 overflow-hidden rounded-md border border-neutral-200 bg-white xl:col-span-2">
+      <section
+        class="min-w-0 overflow-hidden rounded-md border border-neutral-200 bg-white xl:col-span-2"
+      >
         <div class="border-b border-neutral-200 px-4 py-3 sm:px-5">
           <h2 class="text-base font-medium text-neutral-900">По дням недели</h2>
         </div>
@@ -175,35 +181,35 @@
       </section>
     </div>
 
-    @if (snapshot().categories.length) {
-      <section class="rounded-md border border-neutral-200 bg-white">
-        <div class="border-b border-neutral-200 px-4 py-3 sm:px-5">
-          <h2 class="text-base font-medium text-neutral-900">Категории</h2>
+    <section class="min-w-0 rounded-md border border-neutral-200 bg-white">
+      <div class="border-b border-neutral-200 px-4 py-3 sm:px-5">
+        <h2 class="text-base font-medium text-neutral-900">Самые продаваемые категории</h2>
+      </div>
+
+      <div class="grid min-w-0 grid-cols-1 gap-6 p-4 sm:p-5 xl:grid-cols-5">
+        <div class="min-w-0 xl:col-span-3">
+          <app-sales-radar-chart
+            [labels]="categoryLabels()"
+            [values]="categoryValues()"
+            caption="Самые продаваемые категории"
+          />
         </div>
 
-        <div class="flex flex-col gap-2 p-4 sm:p-5">
+        <div class="flex min-w-0 flex-col justify-center gap-3 xl:col-span-2">
           @for (row of snapshot().categories; track row.name) {
-            <div class="flex items-center gap-3">
-              <div class="min-w-0 flex-1">
-                <div class="mb-1 flex items-baseline justify-between gap-2">
-                  <span class="truncate text-sm text-neutral-800">{{ row.name }}</span>
-                  <span class="shrink-0 text-sm text-neutral-800">
-                    {{ formatAmount(row.sold) }}
-                  </span>
-                </div>
-                <div class="h-8 overflow-hidden rounded-md bg-neutral-100">
-                  @if (share(row.sold, categoryMax()) > 0) {
-                    <div
-                      class="h-full rounded-md bg-[#C5DFD9]"
-                      [style.width.%]="share(row.sold, categoryMax())"
-                    ></div>
-                  }
-                </div>
-              </div>
+            <div class="flex items-end gap-2">
+              <span class="min-w-0 shrink truncate text-sm text-neutral-800">{{ row.name }}</span>
+              <span
+                class="mb-1 min-w-2 flex-1 border-t border-neutral-300"
+                aria-hidden="true"
+              ></span>
+              <span class="shrink-0 text-sm text-neutral-800">
+                {{ formatAmount(row.sold) }}
+              </span>
             </div>
           }
         </div>
-      </section>
-    }
+      </div>
+    </section>
   </div>
 }
