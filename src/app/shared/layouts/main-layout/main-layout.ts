@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { ChartLine, FileText, Package, Puzzle, ShoppingCart } from 'lucide';
 import { filter, map } from 'rxjs';
 
 import { Auth } from '../../../features/auth/services/auth';
@@ -32,15 +33,19 @@ export class MainLayout {
    * накладными работает, но организацией не заведует.
    */
   protected readonly nav = computed<readonly SidebarItem[]>(() => [
-    ...(this.recognition.connected() ? [{ label: 'Документы', route: '/documents' }] : []),
+    ...(this.recognition.connected()
+      ? [{ label: 'Документы', icon: FileText, route: '/documents' }]
+      : []),
     ...(this.planning.connected()
       ? [
-          { label: 'Товары', route: '/products' },
-          { label: 'Аналитика продаж', route: '/sales' },
-          { label: 'Планирование закупов', route: '/purchases' },
+          { label: 'Товары', icon: Package, route: '/products' },
+          { label: 'Аналитика продаж', icon: ChartLine, route: '/sales' },
+          { label: 'Планирование закупов', icon: ShoppingCart, route: '/purchases' },
         ]
       : []),
-    ...(this.auth.managesOrganization() ? [{ label: 'Расширение', route: '/settings' }] : []),
+    ...(this.auth.managesOrganization()
+      ? [{ label: 'Расширение', icon: Puzzle, route: '/settings' }]
+      : []),
   ]);
 
   /** Пока спрашиваем расширения, пункты меню ещё не окончательны. */

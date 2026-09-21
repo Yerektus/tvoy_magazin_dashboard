@@ -1,6 +1,17 @@
-<div class="flex h-full w-56 flex-col">
+<div class="relative flex h-full min-w-0 w-full flex-col">
+  <button
+    type="button"
+    class="absolute inset-y-0 right-0 z-10 hidden w-1.5 cursor-col-resize touch-none bg-transparent hover:bg-blue-400/40 lg:block"
+    [class.bg-blue-400/40]="dragging()"
+    aria-label="Изменить ширину меню"
+    (pointerdown)="startResize($event)"
+    (pointermove)="onResize($event)"
+    (pointerup)="endResize()"
+    (pointercancel)="endResize()"
+    (dblclick)="resetWidth()"
+  ></button>
   <div class="flex h-14 items-center px-3">
-    <span class="text-xl px-2 font-normal">Твой магазин</span>
+    <span class="truncate px-2 text-xl font-normal">Твой магазин</span>
   </div>
 
   <nav class="flex flex-col gap-1 p-3">
@@ -14,15 +25,20 @@
           <a
             [routerLink]="item.route"
             routerLinkActive="bg-neutral-200 font-medium text-neutral-900"
-            class="rounded-sm px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-neutral-200 hover:text-neutral-900"
+            class="flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-neutral-200 hover:text-neutral-900"
             (click)="navigated.emit()"
           >
-            {{ item.label }}
+            <app-icon [icon]="item.icon" [size]="16" />
+            <span class="min-w-0 truncate">{{ item.label }}</span>
           </a>
         } @else {
-          <span class="rounded-sm px-3 py-1.5 text-sm text-neutral-400" title="Скоро">{{
-            item.label
-          }}</span>
+          <span
+            class="flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm text-neutral-400"
+            title="Скоро"
+          >
+            <app-icon [icon]="item.icon" [size]="16" />
+            <span class="min-w-0 truncate">{{ item.label }}</span>
+          </span>
         }
       }
     }
