@@ -13,7 +13,10 @@ import { Router, RouterLink } from '@angular/router';
 import { ArrowDown, ArrowRight, ArrowUp, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide';
 
 import { Button } from '../../../../shared/components/button/button';
-import { DateRange, type DateRangeValue } from '../../../../shared/components/date-range/date-range';
+import {
+  DateRange,
+  type DateRangeValue,
+} from '../../../../shared/components/date-range/date-range';
 import { Empty } from '../../../../shared/components/empty/empty';
 import { Icon } from '../../../../shared/components/icon/icon';
 import { Menu } from '../../../../shared/components/menu/menu';
@@ -22,7 +25,11 @@ import {
   NumberRange,
   type NumberRangeValue,
 } from '../../../../shared/components/number-range/number-range';
-import { Select, type SelectOption, type SelectValue } from '../../../../shared/components/select/select';
+import {
+  Select,
+  type SelectOption,
+  type SelectValue,
+} from '../../../../shared/components/select/select';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Table } from '../../../../shared/components/table/table';
 import { TableColumn } from '../../../../shared/components/table/table-column';
@@ -33,16 +40,8 @@ import { Toasts } from '../../../../shared/services/toasts';
 import { Umag } from '../../../extensions/services/umag';
 import { CreatePlanDialog } from '../../components/create-plan-dialog/create-plan-dialog';
 import {
-  type ApprovedPurchase,
-  type ApprovedPurchaseItem,
   type PlanStatus,
   type PurchasePlan,
-  accuracyClasses,
-  accuracyIcon,
-  accuracyLabel,
-  formatAmount,
-  formatApprovedAt,
-  formatCover,
   formatDate,
   formatMoney,
   formatTime,
@@ -57,9 +56,6 @@ import { Planning } from '../../services/planning';
 /** Пока план считается, список спрашиваем так же часто, как карточку. */
 const POLL_INTERVAL = 2500;
 
-/** Столько же длится `accordion-out` в `styles.css`. */
-const COLLAPSE_MS = 200;
-
 /** Сколько строк на одной странице таблицы. */
 const PAGE_SIZE = 50;
 
@@ -73,12 +69,6 @@ const STATUS_ORDER: Record<PlanStatus, number> = {
 };
 
 const HORIZON_OPTIONS = [3, 7, 14, 30] as const;
-
-/** Вкладки списка: таблица планировок и одобренные закупки. */
-const TABS: Record<string, 'plan' | 'approved'> = {
-  План: 'plan',
-  Одобренные: 'approved',
-};
 
 /**
  * Список планировок: новые создают из окна, готовую открывают как накладную.
@@ -106,7 +96,6 @@ const TABS: Record<string, 'plan' | 'approved'> = {
 export class Purchases {
   protected readonly addIcon = Plus;
   protected readonly openIcon = ArrowRight;
-  protected readonly chevronIcon = ChevronRight;
   protected readonly removeIcon = Trash2;
   protected readonly prevIcon = ChevronLeft;
   protected readonly nextIcon = ChevronRight;
@@ -123,9 +112,6 @@ export class Purchases {
     { value: 'failed', label: statusLabel('failed') },
   ];
 
-  protected readonly formatAmount = formatAmount;
-  protected readonly formatApprovedAt = formatApprovedAt;
-  protected readonly formatCover = formatCover;
   protected readonly formatDate = formatDate;
   protected readonly formatMoney = formatMoney;
   protected readonly formatTime = formatTime;
@@ -134,12 +120,8 @@ export class Purchases {
   protected readonly statusClasses = statusClasses;
   protected readonly statusIcon = statusIcon;
   protected readonly statusLabel = statusLabel;
-  protected readonly accuracyLabel = accuracyLabel;
-  protected readonly accuracyIcon = accuracyIcon;
-  protected readonly accuracyClasses = accuracyClasses;
 
   protected readonly plans = signal<PurchasePlan[]>([]);
-  protected readonly approved = signal<ApprovedPurchase[]>([]);
   protected readonly loading = signal(true);
   protected readonly dialogOpen = signal(false);
   protected readonly query = signal('');
@@ -155,13 +137,7 @@ export class Purchases {
   protected readonly sortColumn = signal<SortColumn>('time');
   protected readonly sortDirection = signal<SortDirection>('desc');
 
-  protected readonly opened = signal<ReadonlySet<string>>(new Set());
-  private readonly closing = signal<ReadonlySet<string>>(new Set());
-  protected readonly visible = computed(() => new Set([...this.opened(), ...this.closing()]));
-
   protected readonly trackPlan = (plan: PurchasePlan) => plan.id;
-  protected readonly trackApproved = (purchase: ApprovedPurchase) => purchase.id;
-  protected readonly trackItem = (item: ApprovedPurchaseItem) => item.position;
 
   private readonly planning = inject(Planning);
   private readonly umag = inject(Umag);
@@ -178,10 +154,6 @@ export class Purchases {
    * UMAG ещё не спрашивали, и список рано грузить.
    */
   private readonly store = computed(() => this.umag.account()?.targetId);
-
-  protected readonly tab = computed(() => TABS[this.header.activeTab() ?? ''] ?? 'plan');
-  protected readonly onPlan = computed(() => this.tab() === 'plan');
-  protected readonly onApproved = computed(() => this.tab() === 'approved');
 
   protected readonly filtering = computed(
     () =>
@@ -292,35 +264,12 @@ export class Purchases {
   );
 
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly collapseTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private version = 0;
 
   constructor() {
-    this.header.setTabs(Object.keys(TABS));
-
     effect(() => {
       const actions = this.headerActions();
       this.header.setActions(this.connected() && !this.loading() && actions ? actions : null);
-    });
-
-    effect(() => {
-      const locked = !this.loading() && !this.connected();
-
-      untracked(() => this.header.setTabs(locked ? [] : Object.keys(TABS)));
-    });
-
-    effect(() => {
-      if (!this.onApproved()) {
-        return;
-      }
-
-      this.approved();
-      this.stopCollapsing();
-      this.opened.set(new Set());
-    });
-
-    effect(() => {
-      this.header.setBadges({ Одобренные: this.approved().length });
     });
 
     effect(() => {
@@ -333,7 +282,6 @@ export class Purchases {
 
     inject(DestroyRef).onDestroy(() => {
       this.stopPolling();
-      this.stopCollapsing();
       this.header.setActions(null);
       this.header.clear();
     });
@@ -410,27 +358,6 @@ export class Purchases {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  protected toggle(key: string): void {
-    this.clearCollapseTimer(key);
-
-    if (!this.opened().has(key)) {
-      this.closing.update((current) => without(current, key));
-      this.opened.update((current) => added(current, key));
-      return;
-    }
-
-    this.opened.update((current) => without(current, key));
-    this.closing.update((current) => added(current, key));
-
-    this.collapseTimers.set(
-      key,
-      setTimeout(() => {
-        this.collapseTimers.delete(key);
-        this.closing.update((current) => without(current, key));
-      }, COLLAPSE_MS),
-    );
-  }
-
   protected open(plan: PurchasePlan): void {
     void this.router.navigate(['/purchases', plan.id]);
   }
@@ -482,7 +409,6 @@ export class Purchases {
     this.stopPolling();
     this.loading.set(true);
     this.plans.set([]);
-    this.approved.set([]);
     this.query.set('');
     this.horizonQuery.set('');
     this.statusFilter.set('');
@@ -501,17 +427,13 @@ export class Purchases {
         await this.planning.load();
       }
 
-      const [plans, approved] = await Promise.all([
-        this.planning.plans(),
-        this.planning.approved(),
-      ]);
+      const plans = await this.planning.plans();
 
       if (version !== this.version) {
         return;
       }
 
       this.plans.set(plans);
-      this.approved.set(approved);
       this.poll();
     } catch (error) {
       if (version !== this.version) {
@@ -558,35 +480,6 @@ export class Purchases {
       this.pollTimer = null;
     }
   }
-
-  private clearCollapseTimer(key: string): void {
-    const timer = this.collapseTimers.get(key);
-
-    if (timer !== undefined) {
-      clearTimeout(timer);
-      this.collapseTimers.delete(key);
-    }
-  }
-
-  private stopCollapsing(): void {
-    for (const timer of this.collapseTimers.values()) {
-      clearTimeout(timer);
-    }
-
-    this.collapseTimers.clear();
-    this.closing.set(new Set());
-  }
-}
-
-function added(current: ReadonlySet<string>, value: string): ReadonlySet<string> {
-  return new Set(current).add(value);
-}
-
-function without(current: ReadonlySet<string>, value: string): ReadonlySet<string> {
-  const next = new Set(current);
-  next.delete(value);
-
-  return next;
 }
 
 function comparePlans(first: PurchasePlan, second: PurchasePlan, column: SortColumn): number {
