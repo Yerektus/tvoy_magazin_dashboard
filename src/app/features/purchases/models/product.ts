@@ -78,6 +78,103 @@ export const emptyProducts = (): ProductsSnapshot => ({
   items: [],
 });
 
+/** Фильтры таблицы товаров, которые живут в адресе страницы. */
+export interface ProductFilters {
+  q: string;
+  barcode: string;
+  lastFrom: string;
+  lastTo: string;
+  soldFrom: string;
+  soldTo: string;
+  accuracy: ('high' | 'medium' | 'low' | 'none')[];
+}
+
+const ACCURACY_LEVELS = new Set(['high', 'medium', 'low', 'none']);
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const QTY = /^\d+(\.\d+)?$/;
+
+export const emptyProductFilters = (): ProductFilters => ({
+  q: '',
+  barcode: '',
+  lastFrom: '',
+  lastTo: '',
+  soldFrom: '',
+  soldTo: '',
+  accuracy: [],
+});
+
+/** Читает фильтры из query-строки. Чужое и кривое отбрасываем. */
+export function readProductFilters(get: (key: string) => string | null): ProductFilters {
+  const lastFrom = isoDate(get('last_from'));
+  const lastTo = isoDate(get('last_to'));
+  const [from, to] = lastFrom && lastTo && lastFrom > lastTo ? [lastTo, lastFrom] : [lastFrom, lastTo];
+  const soldFrom = qty(get('sold_from'));
+  const soldTo = qty(get('sold_to'));
+  const [low, high] =
+    soldFrom && soldTo && Number(soldFrom) > Number(soldTo) ? [soldTo, soldFrom] : [soldFrom, soldTo];
+
+  return {
+    q: (get('q') ?? '').trim(),
+    barcode: (get('barcode') ?? '').trim(),
+    lastFrom: from,
+    lastTo: to,
+    soldFrom: low,
+    soldTo: high,
+    accuracy: accuracyList(get('accuracy')),
+  };
+}
+
+/** Query-параметры для адреса: пустые ключи снимаем. */
+export function productFilterParams(filters: ProductFilters): Record<string, string | null> {
+  return {
+    q: filters.q.trim() || null,
+    barcode: filters.barcode.trim() || null,
+    last_from: filters.lastFrom || null,
+    last_to: filters.lastTo || null,
+    sold_from: filters.soldFrom || null,
+    sold_to: filters.soldTo || null,
+    accuracy: filters.accuracy.length ? filters.accuracy.join(',') : null,
+  };
+}
+
+export function sameProductFilters(left: ProductFilters, right: ProductFilters): boolean {
+  return (
+    left.q === right.q &&
+    left.barcode === right.barcode &&
+    left.lastFrom === right.lastFrom &&
+    left.lastTo === right.lastTo &&
+    left.soldFrom === right.soldFrom &&
+    left.soldTo === right.soldTo &&
+    left.accuracy.join(',') === right.accuracy.join(',')
+  );
+}
+
+function isoDate(value: string | null): string {
+  const text = (value ?? '').trim();
+  return DATE.test(text) ? text : '';
+}
+
+function qty(value: string | null): string {
+  const text = (value ?? '').trim().replace(/\s/g, '').replace(',', '.');
+  return QTY.test(text) ? text : '';
+}
+
+function accuracyList(value: string | null): ('high' | 'medium' | 'low' | 'none')[] {
+  const found: ('high' | 'medium' | 'low' | 'none')[] = [];
+  const seen = new Set<string>();
+
+  for (const part of (value ?? '').split(',')) {
+    const level = part.trim();
+
+    if (ACCURACY_LEVELS.has(level) && !seen.has(level)) {
+      seen.add(level);
+      found.push(level as 'high' | 'medium' | 'low' | 'none');
+    }
+  }
+
+  return found;
+}
+
 const MODEL_LABELS: Record<string, string> = {
   average: 'Среднее',
   weighted_average: 'Сглаживание',

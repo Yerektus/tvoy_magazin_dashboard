@@ -9,6 +9,8 @@ export interface ChatMessage {
   created_at: string;
   /** Следующие вопросы к ответу аналитика — их нажимают, а не читают. */
   suggestions?: string[];
+  /** Адрес страницы с фильтрами, которые аналитик выставил сам. */
+  screen?: string | null;
 }
 
 /** Переписка в истории: чем была и когда в ней говорили последний раз. */
@@ -81,6 +83,14 @@ export function starterQuestions(path: string): string[] {
 
 /** Название для списка. Пустое бывает у переписки из одного фото без слов. */
 export const chatName = (chat: ChatSummary): string => chat.title.trim() || 'Без названия';
+
+/** Только товары и продажи — модель сюда чужой адрес не подставит. */
+const SCREEN = /^\/(products|sales)(\?[A-Za-z0-9._~&=%+-]*)?$/;
+
+export function safeScreen(path: string | null | undefined): string | null {
+  const value = (path ?? '').trim();
+  return SCREEN.test(value) ? value : null;
+}
 
 /**
  * Когда реплику отправили — так, как это подписывают в переписке.

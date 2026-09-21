@@ -75,3 +75,35 @@ export const emptyAnalytics = (days = 30): SalesAnalytics => ({
   hours: [],
   categories: [],
 });
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Период сводки из адреса. Пусто — страница сама возьмёт последние дни. */
+export function readSalesRange(
+  get: (key: string) => string | null,
+): { from: string; to: string } | null {
+  const from = isoDate(get('from'));
+  const to = isoDate(get('to'));
+
+  if (!from && !to) {
+    return null;
+  }
+
+  if (from && to && from > to) {
+    return { from: to, to: from };
+  }
+
+  return { from: from || to, to: to || from };
+}
+
+export function salesRangeParams(from: string, to: string): Record<string, string | null> {
+  return {
+    from: DATE.test(from) ? from : null,
+    to: DATE.test(to) ? to : null,
+  };
+}
+
+function isoDate(value: string | null): string {
+  const text = (value ?? '').trim();
+  return DATE.test(text) ? text : '';
+}

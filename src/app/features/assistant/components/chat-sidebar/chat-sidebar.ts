@@ -12,7 +12,7 @@ import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Confirm } from '../../../../shared/services/confirm';
 import { PageHeader } from '../../../../shared/services/page-header';
 import { Toasts } from '../../../../shared/services/toasts';
-import { chatName, formatSentAt, starterQuestions, type ChatSummary } from '../../models/chat';
+import { chatName, formatSentAt, safeScreen, starterQuestions, type ChatSummary } from '../../models/chat';
 import { Assistant } from '../../services/assistant';
 import { ChatMarkdown } from '../chat-markdown/chat-markdown';
 
@@ -215,6 +215,21 @@ export class ChatSidebar {
         this.wasThinking = thinking;
       });
     });
+
+    effect(() => {
+      const arriving = this.arrivingId();
+      const messages = this.assistant.messages();
+
+      if (!arriving) {
+        return;
+      }
+
+      const last = messages.at(-1);
+
+      if (last?.id === arriving && last.screen) {
+        untracked(() => this.openScreen(last.screen));
+      }
+    });
   }
 
   protected startResize(event: PointerEvent): void {
@@ -397,7 +412,7 @@ export class ChatSidebar {
     try {
       await this.assistant.ask({
         title: this.pageBadge(),
-        path: this.routeUrl().split(/[?#]/)[0] ?? '/',
+        path: this.routeUrl().split('#')[0] ?? '/',
       });
       this.resetField();
     } catch (error) {
@@ -425,6 +440,22 @@ export class ChatSidebar {
     if (field) {
       field.style.height = '';
     }
+  }
+
+  private openScreen(path: string | null | undefined): void {
+    const screen = safeScreen(path);
+
+    if (!screen) {
+      return;
+    }
+
+    const current = this.router.url.split('#')[0];
+
+    if (current === screen) {
+      return;
+    }
+
+    void this.router.navigateByUrl(screen);
   }
 
   private resize(field: HTMLTextAreaElement): void {

@@ -9,7 +9,8 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RefreshCw } from 'lucide';
 
 import { Button } from '../../../../shared/components/button/button';
@@ -42,11 +43,15 @@ import {
   formatTime,
 } from '../../models/plan';
 import {
+  type ProductFilters,
   type ProductsQuery,
   type ProductsSnapshot,
   type SalesSyncStatus,
   type StoreProduct,
   emptyProducts,
+  productFilterParams,
+  readProductFilters,
+  sameProductFilters,
 } from '../../models/product';
 import { Planning } from '../../services/planning';
 
@@ -119,6 +124,7 @@ export class Products {
   private readonly umag = inject(Umag);
   private readonly toasts = inject(Toasts);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly header = inject(PageHeader);
   private readonly headerActions = viewChild<TemplateRef<unknown>>('headerActions');
 
@@ -159,6 +165,9 @@ export class Products {
    * спрашивали, и список рано грузить.
    */
   private readonly store = computed(() => this.umag.account()?.targetId);
+  private readonly queryParams = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap,
+  });
 
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -181,6 +190,18 @@ export class Products {
       }
     });
 
+    effect(() => {
+      const params = this.queryParams();
+      const store = this.store();
+      const loading = this.loading();
+
+      if (store === undefined || loading) {
+        return;
+      }
+
+      untracked(() => this.applyRouteFilters(params));
+    });
+
     void this.start();
 
     inject(DestroyRef).onDestroy(() => {
@@ -192,28 +213,33 @@ export class Products {
 
   protected search(event: Event): void {
     this.query.set((event.target as HTMLInputElement).value);
+    this.writeQuery();
     this.scheduleRefresh();
   }
 
   protected searchBarcode(event: Event): void {
     this.barcodeQuery.set((event.target as HTMLInputElement).value);
+    this.writeQuery();
     this.scheduleRefresh();
   }
 
   protected filterLastRange(range: DateRangeValue): void {
     this.lastFrom.set(range.from);
     this.lastTo.set(range.to);
+    this.writeQuery();
     void this.refresh(this.version, { table: true, page: 1 });
   }
 
   protected filterSoldRange(range: NumberRangeValue): void {
     this.soldFrom.set(range.from);
     this.soldTo.set(range.to);
+    this.writeQuery();
     void this.refresh(this.version, { table: true, page: 1 });
   }
 
   protected filterAccuracy(values: SelectValue[]): void {
     this.accuracyQuery.set(values as AccuracyLevel[]);
+    this.writeQuery();
     this.scheduleRefresh();
   }
 
@@ -298,13 +324,7 @@ export class Products {
     this.stopSearch();
     this.loading.set(true);
     this.apply(emptyProducts());
-    this.query.set('');
-    this.barcodeQuery.set('');
-    this.lastFrom.set('');
-    this.lastTo.set('');
-    this.soldFrom.set('');
-    this.soldTo.set('');
-    this.accuracyQuery.set([]);
+    this.takeFilters(readProductFilters((key) => this.route.snapshot.queryParamMap.get(key)));
     this.page.set(1);
     this.sortColumn.set('sold');
     this.sortDirection.set('desc');
@@ -497,6 +517,48 @@ export class Products {
       (requested.sort != null && requested.sort !== this.sortColumn()) ||
       (requested.order != null && requested.order !== this.sortDirection())
     );
+  }
+
+  /** Фильтры из адреса: агент выставил — обновляем таблицу, свои не трогаем. */
+  private applyRouteFilters(params: { get(key: string): string | null }): void {
+    const next = readProductFilters((key) => params.get(key));
+
+    if (sameProductFilters(next, this.currentFilters())) {
+      return;
+    }
+
+    this.takeFilters(next);
+    void this.refresh(this.version, { table: true, page: 1 });
+  }
+
+  private currentFilters(): ProductFilters {
+    return {
+      q: this.query(),
+      barcode: this.barcodeQuery(),
+      lastFrom: this.lastFrom(),
+      lastTo: this.lastTo(),
+      soldFrom: this.soldFrom(),
+      soldTo: this.soldTo(),
+      accuracy: this.accuracyQuery(),
+    };
+  }
+
+  private takeFilters(filters: ProductFilters): void {
+    this.query.set(filters.q);
+    this.barcodeQuery.set(filters.barcode);
+    this.lastFrom.set(filters.lastFrom);
+    this.lastTo.set(filters.lastTo);
+    this.soldFrom.set(filters.soldFrom);
+    this.soldTo.set(filters.soldTo);
+    this.accuracyQuery.set(filters.accuracy);
+  }
+
+  private writeQuery(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: productFilterParams(this.currentFilters()),
+      replaceUrl: true,
+    });
   }
 }
 
