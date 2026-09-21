@@ -15,6 +15,13 @@ export interface SidebarItem {
   route: string | null;
 }
 
+/** Блок пунктов одного расширения. Пустые не кладём: дырка в меню хуже короткого списка. */
+export interface SidebarGroup {
+  /** Подпись над пунктами — вместо черты между блоками. */
+  label: string;
+  items: readonly SidebarItem[];
+}
+
 const WIDTH_KEY = 'sidebar-width';
 const DEFAULT_WIDTH = 224;
 const MIN_WIDTH = 200;
@@ -40,7 +47,7 @@ const MIN_WIDTH = 200;
 export class Sidebar {
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly items = input.required<readonly SidebarItem[]>();
+  readonly groups = input.required<readonly SidebarGroup[]>();
   /** Пока спрашиваем расширения — вместо пунктов меню крутится спиннер. */
   readonly loading = input(false);
   /** Открыт ли сайдбар. Ширина съезжает к нулю, содержимое обрезается. */

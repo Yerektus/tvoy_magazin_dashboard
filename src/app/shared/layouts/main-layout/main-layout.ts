@@ -11,7 +11,7 @@ import { Planning } from '../../../features/purchases/services/planning';
 import { Assistant } from '../../../features/assistant/services/assistant';
 import { ChatSidebar } from '../../../features/assistant/components/chat-sidebar/chat-sidebar';
 import { Header } from './components/header/header';
-import { Sidebar, SidebarItem } from './components/sidebar/sidebar';
+import { Sidebar, SidebarGroup } from './components/sidebar/sidebar';
 
 /** Каркас внутренних страниц: хедер сверху, сайдбар слева, страница в `<router-outlet />`. */
 @Component({
@@ -28,25 +28,40 @@ export class MainLayout {
   protected readonly assistant = inject(Assistant);
 
   /**
-   * Страницы от расширений появляются, только когда те подключены, а сам
-   * каталог расширений — только у владельца и администратора: менеджер с
-   * накладными работает, но организацией не заведует.
+   * Меню собрано по расширениям: документы отдельно, закупки — три страницы
+   * одного сервиса, каталог — только у владельца и администратора. Иначе
+   * «Аналитика продаж» выглядит соседкой накладных, хотя это другое дело.
    */
-  protected readonly nav = computed<readonly SidebarItem[]>(() => [
-    ...(this.recognition.connected()
-      ? [{ label: 'Документы', icon: FileText, route: '/documents' }]
-      : []),
-    ...(this.planning.connected()
-      ? [
+  protected readonly nav = computed<readonly SidebarGroup[]>(() => {
+    const groups: SidebarGroup[] = [];
+
+    if (this.recognition.connected()) {
+      groups.push({
+        label: 'Распознавание',
+        items: [{ label: 'Документы', icon: FileText, route: '/documents' }],
+      });
+    }
+
+    if (this.planning.connected()) {
+      groups.push({
+        label: 'Закупки',
+        items: [
           { label: 'Товары', icon: Package, route: '/products' },
           { label: 'Аналитика продаж', icon: ChartLine, route: '/sales' },
           { label: 'Планирование закупов', icon: ShoppingCart, route: '/purchases' },
-        ]
-      : []),
-    ...(this.auth.managesOrganization()
-      ? [{ label: 'Расширение', icon: Puzzle, route: '/settings' }]
-      : []),
-  ]);
+        ],
+      });
+    }
+
+    if (this.auth.managesOrganization()) {
+      groups.push({
+        label: 'Настройки',
+        items: [{ label: 'Расширение', icon: Puzzle, route: '/settings' }],
+      });
+    }
+
+    return groups;
+  });
 
   /** Пока спрашиваем расширения, пункты меню ещё не окончательны. */
   protected readonly navLoading = computed(
