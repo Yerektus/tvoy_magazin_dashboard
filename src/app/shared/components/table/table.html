@@ -4,13 +4,17 @@
       <tr class="text-left text-sm text-neutral-500">
         @for (column of columns(); track column.key()) {
           <th
-            class="border-neutral-100 bg-white px-3 py-2 font-normal"
+            class="border-neutral-100 bg-white py-2 font-normal"
             [class.border-b]="!maxHeight()"
             [class.sticky]="maxHeight()"
             [class.top-0]="maxHeight()"
             [class.z-10]="maxHeight()"
             [class]="column.width()"
             [class.text-right]="column.align() === 'right'"
+            [class.pl-0]="$first"
+            [class.pl-3]="!$first"
+            [class.pr-0]="$last"
+            [class.pr-3]="!$last"
           >
             @if (column.headerTemplate(); as headerTemplate) {
               <ng-container *ngTemplateOutlet="headerTemplate" />
@@ -25,12 +29,16 @@
         <tr>
           @for (column of columns(); track column.key()) {
             <th
-              class="border-b border-neutral-100 bg-white px-2 py-1.5 font-normal"
+              class="border-b border-neutral-100 bg-white py-1.5 font-normal"
               [class.border-t]="maxHeight()"
               [class.sticky]="maxHeight()"
               [class.top-9]="maxHeight()"
               [class.z-10]="maxHeight()"
               [class]="column.width()"
+              [class.pl-0]="$first"
+              [class.pl-3]="!$first"
+              [class.pr-0]="$last"
+              [class.pr-3]="!$last"
             >
               @if (column.filterTemplate(); as filterTemplate) {
                 <ng-container *ngTemplateOutlet="filterTemplate" />
@@ -52,9 +60,13 @@
         >
           @for (column of columns(); track column.key()) {
             <td
-              class="border-b border-neutral-100 px-3 py-3 align-top"
+              class="border-b border-neutral-100 py-3 align-top"
               [class]="column.width()"
               [class.text-right]="column.align() === 'right'"
+              [class.pl-0]="$first"
+              [class.pl-3]="!$first"
+              [class.pr-0]="$last"
+              [class.pr-3]="!$last"
             >
               <ng-container
                 *ngTemplateOutlet="column.template; context: { $implicit: row, index: rowIndex }"
@@ -67,7 +79,7 @@
           <tr>
             <td
               [attr.colspan]="columns().length"
-              class="border-b border-neutral-100 px-3 py-10 text-center text-sm text-neutral-500"
+              class="border-b border-neutral-100 py-10 text-center text-sm text-neutral-500"
             >
               @if (loading()) {
                 <app-spinner [size]="20" class="text-neutral-400" />
@@ -85,9 +97,13 @@
         <tr class="font-medium">
           @for (column of columns(); track column.key()) {
             <td
-              class="border-t border-neutral-100 px-3 py-3"
+              class="border-t border-neutral-100 py-3"
               [class]="column.width()"
               [class.text-right]="column.align() === 'right'"
+              [class.pl-0]="$first"
+              [class.pl-3]="!$first"
+              [class.pr-0]="$last"
+              [class.pr-3]="!$last"
             >
               @if (column.footerTemplate(); as footerTemplate) {
                 <ng-container *ngTemplateOutlet="footerTemplate" />

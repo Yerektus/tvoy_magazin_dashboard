@@ -14,6 +14,9 @@ import { TableColumn } from './table-column';
  *   </ng-template>
  * </app-table>
  * ```
+ *
+ * Крайние колонки без бокового отступа: шапка сходится с подписью «Всего»
+ * над таблицей, между колонками зазор остаётся.
  */
 @Component({
   selector: 'app-table',
