@@ -1,6 +1,6 @@
 import { Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { type IconNode, LogOut } from 'lucide';
+import { ChevronDown, type IconNode, LogOut } from 'lucide';
 
 import { Avatar } from '../../../../components/avatar/avatar';
 import { Icon } from '../../../../components/icon/icon';
@@ -23,6 +23,7 @@ export interface SidebarGroup {
 }
 
 const WIDTH_KEY = 'sidebar-width';
+const COLLAPSED_KEY = 'sidebar-collapsed-groups';
 const DEFAULT_WIDTH = 224;
 const MIN_WIDTH = 200;
 
@@ -59,8 +60,11 @@ export class Sidebar {
   readonly logout = output<void>();
 
   protected readonly logoutIcon = LogOut;
+  protected readonly chevronIcon = ChevronDown;
   protected readonly dragging = signal(false);
   protected readonly width = signal(readWidth());
+  /** Какие группы свёрнуты — иначе после обновления страницы всё снова открыто. */
+  protected readonly collapsed = signal<ReadonlySet<string>>(readCollapsed());
 
   private readonly desktop = signal(isDesktop());
   private dragStartX = 0;
@@ -122,6 +126,23 @@ export class Sidebar {
     writeWidth(this.width());
   }
 
+  protected isCollapsed(label: string): boolean {
+    return this.collapsed().has(label);
+  }
+
+  protected toggleGroup(label: string): void {
+    const next = new Set(this.collapsed());
+
+    if (next.has(label)) {
+      next.delete(label);
+    } else {
+      next.add(label);
+    }
+
+    this.collapsed.set(next);
+    writeCollapsed(next);
+  }
+
   protected resetWidth(): void {
     this.width.set(DEFAULT_WIDTH);
     writeWidth(DEFAULT_WIDTH);
@@ -168,4 +189,22 @@ function readWidth(): number {
 
 function writeWidth(value: number): void {
   localStorage.setItem(WIDTH_KEY, String(value));
+}
+
+function readCollapsed(): Set<string> {
+  try {
+    const raw: unknown = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '[]');
+
+    if (!Array.isArray(raw)) {
+      return new Set();
+    }
+
+    return new Set(raw.filter((item): item is string => typeof item === 'string'));
+  } catch {
+    return new Set();
+  }
+}
+
+function writeCollapsed(value: ReadonlySet<string>): void {
+  localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...value]));
 }

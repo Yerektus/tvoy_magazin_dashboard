@@ -10,38 +10,53 @@
     (pointercancel)="endResize()"
     (dblclick)="resetWidth()"
   ></button>
-  <div class="flex h-14 items-center px-3">
-    <span class="truncate px-2 text-xl font-normal">Твой магазин</span>
+  <div class="flex h-14 items-center px-4">
+    <span class="truncate text-xl font-normal">Твой магазин</span>
   </div>
 
-  <nav class="flex flex-col gap-4 p-3">
+  <nav class="flex flex-col gap-4 py-3 px-4">
     @if (loading()) {
-      <div class="flex justify-center py-6 text-neutral-400">
+      <div class="flex justify-center py-6 px-4 text-neutral-400">
         <app-spinner [size]="20" />
       </div>
     } @else {
       @for (group of groups(); track group.label) {
         <div class="flex flex-col gap-1" role="group" [attr.aria-label]="group.label">
-          <p class="px-3 pb-0.5 text-xs text-neutral-400">{{ group.label }}</p>
-          @for (item of group.items; track item.label) {
-            @if (item.route) {
-              <a
-                [routerLink]="item.route"
-                routerLinkActive="bg-neutral-200 font-medium text-neutral-900"
-                class="flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-neutral-200 hover:text-neutral-900"
-                (click)="navigated.emit()"
-              >
-                <app-icon [icon]="item.icon" [size]="16" />
-                <span class="min-w-0 truncate">{{ item.label }}</span>
-              </a>
-            } @else {
-              <span
-                class="flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm text-neutral-400"
-                title="Скоро"
-              >
-                <app-icon [icon]="item.icon" [size]="16" />
-                <span class="min-w-0 truncate">{{ item.label }}</span>
-              </span>
+          <button
+            type="button"
+            class="flex w-full cursor-pointer items-center gap-0.5 rounded-sm py-1 pr-3 text-left text-xs text-neutral-400 transition hover:text-neutral-600"
+            [attr.aria-expanded]="!isCollapsed(group.label)"
+            (click)="toggleGroup(group.label)"
+          >
+            <span class="min-w-0 truncate">{{ group.label }}</span>
+            <app-icon
+              [icon]="chevronIcon"
+              [size]="12"
+              class="shrink-0 transition-transform duration-200 motion-reduce:transition-none"
+              [class.-rotate-90]="isCollapsed(group.label)"
+            />
+          </button>
+          @if (!isCollapsed(group.label)) {
+            @for (item of group.items; track item.label) {
+              @if (item.route) {
+                <a
+                  [routerLink]="item.route"
+                  routerLinkActive="bg-neutral-200 font-medium text-neutral-900"
+                  class="flex items-center gap-2 rounded-sm py-1.5 pr-3 pl-2 text-sm text-neutral-600 transition hover:bg-neutral-200 hover:text-neutral-900"
+                  (click)="navigated.emit()"
+                >
+                  <app-icon [icon]="item.icon" [size]="16" />
+                  <span class="min-w-0 truncate">{{ item.label }}</span>
+                </a>
+              } @else {
+                <span
+                  class="flex items-center gap-2 rounded-sm py-1.5 pr-3 pl-2 text-sm text-neutral-400"
+                  title="Скоро"
+                >
+                  <app-icon [icon]="item.icon" [size]="16" />
+                  <span class="min-w-0 truncate">{{ item.label }}</span>
+                </span>
+              }
             }
           }
         </div>

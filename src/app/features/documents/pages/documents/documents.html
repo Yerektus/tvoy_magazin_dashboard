@@ -1,4 +1,32 @@
-@if (ready() && !connected() && documents().length === 0 && !loading()) {
+<ng-template #headerActions>
+  @if (connected() && !loading()) {
+    <span class="sm:hidden">
+      <app-button
+        variant="primary"
+        size="lg"
+        [icon]="true"
+        ariaLabel="Добавить документ"
+        (click)="dialogOpen.set(true)"
+      >
+        <app-icon [icon]="addIcon" />
+      </app-button>
+    </span>
+    <span class="hidden sm:contents">
+      <app-button variant="primary" (click)="dialogOpen.set(true)">
+        <span class="flex items-center gap-2">
+          <app-icon [icon]="addIcon" />
+          Добавить документ
+        </span>
+      </app-button>
+    </span>
+  }
+</ng-template>
+
+@if (!ready() || loading()) {
+  <div class="flex min-h-[70vh] items-center justify-center text-neutral-400">
+    <app-spinner [size]="24" />
+  </div>
+} @else if (!connected()) {
   <app-empty title="Расширение не подключено">
     Распознавание читает фото накладной и собирает из него список позиций. Подключите его на
     странице расширения — снимать можно сразу.
@@ -13,80 +41,228 @@
       </a>
     }
   </app-empty>
-} @else {
-  <app-toolbar>
-    <p class="text-sm text-neutral-500">
-      Всего: <span class="text-black">{{ total() }}</span>
-    </p>
+} @else if (!total() && !filtering()) {
+  <app-empty title="Документов пока нет">
+    Добавьте первую накладную — распознавание соберёт из фото список позиций.
 
-    @if (connected()) {
-      <div toolbarActions>
-        <app-button variant="primary" (click)="dialogOpen.set(true)">
-          <span class="flex items-center gap-2">
-            <app-icon [icon]="addIcon" />
-            Добавить документ
-          </span>
-        </app-button>
-      </div>
-    }
+    <div emptyAction class="mt-4">
+      <app-button variant="primary" (click)="dialogOpen.set(true)">
+        <span class="flex items-center justify-center gap-2">
+          <app-icon [icon]="addIcon" />
+          Добавить документ
+        </span>
+      </app-button>
+    </div>
+  </app-empty>
+} @else {
+  @if (error()) {
+    <p class="mb-4 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {{ error() }}
+    </p>
+  }
+
+  <app-toolbar class="mb-4">
+    <p class="text-sm text-neutral-500">
+      Всего: <span class="text-black">{{ total().toLocaleString('ru-RU') }}</span>
+    </p>
   </app-toolbar>
 
-  <ng-template #selectAll>
-    <app-checkbox
-      ariaLabel="Выбрать все документы"
-      [checked]="allSelected()"
-      [indeterminate]="someSelected()"
-      (toggled)="toggleAll()"
-    />
-  </ng-template>
-
   <app-table
-    class="mt-4 block"
+    class="block"
     minWidth="min-w-[56rem]"
+    maxHeight="h-[calc(100dvh-14rem)] max-h-[calc(100dvh-14rem)]"
     [rows]="documents()"
     [trackKey]="trackById"
-    [loading]="loading()"
+    [clickable]="!pending()"
+    [loading]="pending()"
     [empty]="emptyText()"
-    [clickable]="true"
     (rowClick)="open($event)"
   >
-    <ng-template appTableColumn="select" [headerTemplate]="selectAll" width="w-10" let-document>
-      <app-checkbox
-        class="mt-0.5"
-        [ariaLabel]="'Выбрать ' + documentTitle(document)"
-        [checked]="isSelected(document.id)"
-        (toggled)="toggle(document.id)"
+    <ng-template #senderHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('supplier')"
+        [attr.aria-sort]="
+          isSorted('supplier') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('supplier')"
+      >
+        Отправитель
+        @if (sortIcon('supplier'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #senderFilter>
+      <input
+        type="search"
+        class="h-8 w-full rounded-md border border-neutral-200 bg-white px-2 text-sm outline-none placeholder:text-neutral-400 hover:border-blue-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+        placeholder="Поставщик или БИН"
+        autocomplete="off"
+        [value]="supplierQuery()"
+        (input)="searchSupplier($event)"
+        (click)="$event.stopPropagation()"
       />
     </ng-template>
 
-    <ng-template appTableColumn="sender" header="Отправитель" width="w-64" let-document>
+    <ng-template #titleHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('number')"
+        [attr.aria-sort]="
+          isSorted('number') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('number')"
+      >
+        Документ
+        @if (sortIcon('number'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #titleFilter>
+      <input
+        type="search"
+        class="h-8 w-full rounded-md border border-neutral-200 bg-white px-2 text-sm outline-none placeholder:text-neutral-400 hover:border-blue-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+        placeholder="Номер"
+        autocomplete="off"
+        [value]="numberQuery()"
+        (input)="searchNumber($event)"
+        (click)="$event.stopPropagation()"
+      />
+    </ng-template>
+
+    <ng-template #linesHeader>
+      <button
+        type="button"
+        class="ml-auto flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('lines')"
+        [attr.aria-sort]="
+          isSorted('lines') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('lines')"
+      >
+        Позиции
+        @if (sortIcon('lines'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #linesFilter>
+      <app-number-range
+        [from]="linesFrom()"
+        [to]="linesTo()"
+        (rangeChange)="filterLinesRange($event)"
+      />
+    </ng-template>
+
+    <ng-template #statusHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('status')"
+        [attr.aria-sort]="
+          isSorted('status') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('status')"
+      >
+        Статус
+        @if (sortIcon('status'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #statusFilterTpl>
+      <app-select
+        compact
+        placeholder="Все"
+        ariaLabel="Статус"
+        [options]="statusOptions"
+        [value]="statusQuery()"
+        (selected)="filterStatus($event)"
+      />
+    </ng-template>
+
+    <ng-template #timeHeader>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-1 transition hover:text-neutral-900"
+        [class.text-neutral-900]="isSorted('created')"
+        [attr.aria-sort]="
+          isSorted('created') ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'
+        "
+        (click)="toggleSort('created')"
+      >
+        Дата
+        @if (sortIcon('created'); as icon) {
+          <app-icon [icon]="icon" [size]="14" />
+        }
+      </button>
+    </ng-template>
+
+    <ng-template #timeFilter>
+      <app-date-range [from]="dateFrom()" [to]="dateTo()" (rangeChange)="filterDateRange($event)" />
+    </ng-template>
+
+    <ng-template
+      appTableColumn="sender"
+      [headerTemplate]="senderHeader"
+      [filterTemplate]="senderFilter"
+      width="w-64"
+      let-document
+    >
       <p class="break-words">{{ document.supplier || 'Поставщик не распознан' }}</p>
       <p class="mt-0.5 break-words text-neutral-400">{{ document.supplier_bin || '—' }}</p>
     </ng-template>
 
-    <ng-template appTableColumn="title" header="Документ" width="w-72" let-document>
-      <a
-        [routerLink]="['/documents', document.id]"
-        class="block font-normal break-words hover:text-blue-600"
-      >
-        {{ documentTitle(document) }}
-      </a>
-      <p class="mt-0.5 text-neutral-400">Позиций: {{ document.lines_count }}</p>
+    <ng-template
+      appTableColumn="title"
+      [headerTemplate]="titleHeader"
+      [filterTemplate]="titleFilter"
+      width="w-72"
+      let-document
+    >
+      <p class="break-words">{{ documentTitle(document) }}</p>
     </ng-template>
 
-    <ng-template appTableColumn="status" header="Статус" width="w-40" let-document>
-      <span
-        class="flex items-center gap-2 whitespace-nowrap"
-        [class]="statusClasses(document.status)"
-      >
-        <app-icon [icon]="statusIcon(document.status)" />
+    <ng-template
+      appTableColumn="lines"
+      [headerTemplate]="linesHeader"
+      [filterTemplate]="linesFilter"
+      width="w-28"
+      align="right"
+      let-document
+    >
+      <span class="whitespace-nowrap">{{ document.lines_count }}</span>
+    </ng-template>
+
+    <ng-template
+      appTableColumn="status"
+      [headerTemplate]="statusHeader"
+      [filterTemplate]="statusFilterTpl"
+      width="w-40"
+      let-document
+    >
+      <span class="flex items-center gap-2 whitespace-nowrap text-neutral-900">
+        <app-icon [icon]="statusIcon(document.status)" [class]="statusClasses(document.status)" />
         {{ statusLabel(document.status) }}
       </span>
     </ng-template>
 
-    <ng-template appTableColumn="time" header="Дата" width="w-28" let-document>
-      <p class="whitespace-nowrap text-neutral-500">{{ formatDate(document.created_at) }}</p>
-      <p class="mt-0.5 whitespace-nowrap text-neutral-400">{{ formatTime(document.created_at) }}</p>
+    <ng-template
+      appTableColumn="time"
+      [headerTemplate]="timeHeader"
+      [filterTemplate]="timeFilter"
+      width="w-44"
+      let-document
+    >
+      <p class="whitespace-nowrap text-neutral-500">{{ formatMoment(document.created_at) }}</p>
     </ng-template>
 
     <ng-template appTableColumn="actions" width="w-12" align="right" let-document>
@@ -112,6 +288,30 @@
       </app-menu>
     </ng-template>
   </app-table>
+
+  <nav class="mt-4 flex items-center gap-2" aria-label="Страницы">
+    <app-button
+      variant="secondary"
+      [icon]="true"
+      [disabled]="pending() || shownPage() <= 1"
+      ariaLabel="Предыдущая страница"
+      (click)="goTo(shownPage() - 1)"
+    >
+      <app-icon [icon]="prevIcon" />
+    </app-button>
+
+    <app-button
+      variant="secondary"
+      [icon]="true"
+      [disabled]="pending() || shownPage() >= pageCount()"
+      ariaLabel="Следующая страница"
+      (click)="goTo(shownPage() + 1)"
+    >
+      <app-icon [icon]="nextIcon" />
+    </app-button>
+
+    <p class="text-sm text-neutral-500">{{ rangeLabel() }}</p>
+  </nav>
 }
 
 <app-add-document-dialog

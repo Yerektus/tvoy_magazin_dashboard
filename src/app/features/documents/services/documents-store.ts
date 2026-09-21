@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
@@ -19,6 +19,23 @@ export interface FailedUpload {
 export interface UploadResult {
   created: DocumentItem[];
   failed: FailedUpload[];
+}
+
+/** Параметры списка — те же, что уходит в шапку колонок и пагинацию. */
+export interface DocumentsQuery {
+  tab?: string;
+  page?: number;
+  supplier?: string;
+  number?: string;
+  status?: string;
+  linesFrom?: string;
+  linesTo?: string;
+  from?: string;
+  to?: string;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  /** Обновление таблицы: строки остаются, крутится спиннер поверх. */
+  soft?: boolean;
 }
 
 /** Как часто спрашиваем бэкенд, закончил ли ИИ разбирать накладную. */
@@ -46,10 +63,15 @@ export class DocumentsStore {
   readonly documents = this.items.asReadonly();
   readonly total = signal(0);
   readonly loading = signal(false);
+  /** Фильтр или страница — таблица не схлопывается, только тускнеет. */
+  readonly pending = signal(false);
   readonly error = signal<string | null>(null);
 
-  /** Открытая вкладка списка: `all`, `pending`, `checked` или `deleted`. */
+  /** Открыта вкладка списка: `all`, `pending`, `checked` или `deleted`. */
   private readonly tab = signal('all');
+
+  /** Последний запрос списка — после загрузки фото список обновляется тем же. */
+  private query: DocumentsQuery = {};
 
   /** Сколько накладных в каждой вкладке: числа стоят рядом с их названиями. */
   readonly counts = signal<Record<string, number>>({});
@@ -58,20 +80,34 @@ export class DocumentsStore {
   private readonly watched = new Set<number>();
 
   /**
-   * Список выбранной вкладки. Вкладку запоминаем: после загрузки фото или
-   * удаления список обновляется сам и должен остаться там же, где был.
+   * Список выбранной вкладки. Вкладку и фильтры запоминаем: после загрузки
+   * фото или удаления список обновляется сам и должен остаться там же.
    */
-  async load(tab?: string): Promise<void> {
-    if (tab) {
-      this.tab.set(tab);
+  async load(query: DocumentsQuery = {}): Promise<void> {
+    this.query = {
+      ...this.query,
+      ...query,
+      tab: query.tab ?? this.query.tab ?? this.tab(),
+    };
+
+    if (this.query.tab) {
+      this.tab.set(this.query.tab);
     }
 
-    this.loading.set(true);
+    const soft = query.soft === true;
+
+    if (soft) {
+      this.pending.set(true);
+    } else {
+      this.loading.set(true);
+    }
+
     this.error.set(null);
 
     try {
-      const params = this.tab() === 'all' ? {} : { params: { tab: this.tab() } };
-      const page = await firstValueFrom(this.http.get<Page<DocumentItem>>(this.url, params));
+      const page = await firstValueFrom(
+        this.http.get<Page<DocumentItem>>(this.url, { params: listParams(this.query) }),
+      );
       this.items.set(page.results);
       this.total.set(page.count);
       page.results.filter(isPending).forEach((document) => this.watch(document.id));
@@ -82,7 +118,11 @@ export class DocumentsStore {
       this.error.set(message);
       this.toasts.error(message);
     } finally {
-      this.loading.set(false);
+      if (soft) {
+        this.pending.set(false);
+      } else {
+        this.loading.set(false);
+      }
     }
   }
 
@@ -140,7 +180,7 @@ export class DocumentsStore {
     }
 
     if (created.length) {
-      await this.load();
+      await this.load({ soft: true, page: 1 });
       created.forEach((document) => this.watch(document.id));
     }
 
@@ -164,9 +204,7 @@ export class DocumentsStore {
    */
   async updateDocument(id: number, patch: Partial<DocumentItem>): Promise<DocumentItem> {
     try {
-      const saved = await firstValueFrom(
-        this.http.patch<DocumentItem>(`${this.url}${id}/`, patch),
-      );
+      const saved = await firstValueFrom(this.http.patch<DocumentItem>(`${this.url}${id}/`, patch));
       // Список открыт за карточкой — там та же накладная, и она должна сойтись.
       this.merge(saved);
 
@@ -299,6 +337,37 @@ export class DocumentsStore {
       return next;
     });
   }
+}
+
+function listParams(query: DocumentsQuery): HttpParams {
+  let params = new HttpParams();
+
+  const tab = query.tab && query.tab !== 'all' ? query.tab : '';
+  if (tab) {
+    params = params.set('tab', tab);
+  }
+
+  if (query.page && query.page > 1) {
+    params = params.set('page', String(query.page));
+  }
+
+  for (const [key, value] of Object.entries({
+    supplier: query.supplier,
+    number: query.number,
+    status: query.status,
+    lines_from: query.linesFrom,
+    lines_to: query.linesTo,
+    from: query.from,
+    to: query.to,
+    sort: query.sort,
+    order: query.order,
+  })) {
+    if (value) {
+      params = params.set(key, value);
+    }
+  }
+
+  return params;
 }
 
 function describe(error: unknown): string {
